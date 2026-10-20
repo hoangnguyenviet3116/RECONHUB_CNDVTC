@@ -1,0 +1,1 @@
+-- [P1-06] Script nạp dữ liệu mẫu chuẩn: 100tr đơn hợp lệ / 90tr QR / 75tr đã phân bổ / 5tr tiền treo

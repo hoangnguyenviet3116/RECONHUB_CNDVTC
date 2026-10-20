@@ -1,0 +1,15 @@
+# Python virtual environment & cache
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables & secrets (NEVER commit .env!)
+.env
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

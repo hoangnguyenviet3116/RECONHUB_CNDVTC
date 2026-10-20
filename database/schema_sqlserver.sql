@@ -1,0 +1,1 @@
+-- [P1-03] Script khởi tạo 9 bảng chuẩn trên Microsoft SQL Server (Append-Only Ledger)
