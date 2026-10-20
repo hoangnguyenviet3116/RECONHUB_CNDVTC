@@ -1,3 +1,4 @@
+
 # 🏦 VIETQR RECONHUB — Nền tảng Quản lý Đơn hàng, Đối soát Dòng tiền Tự động & Sổ cái Chỉ Ghi Thêm Phát hiện Chỉnh sửa
 
 > **Tên đề tài chính thức:** Thiết kế mô hình dịch vụ FinTech **VietQR ReconHub** hỗ trợ quản lý đơn hàng, đối soát dòng tiền tự động và minh bạch hóa thanh toán QR cho Hộ kinh doanh tại Việt Nam.  
@@ -57,3 +58,4 @@ Lấy **Tổng giá trị đơn hàng hợp lệ (`valid_order_total = 100 tri�
 - **Đã phát hành QR nhưng chưa thu đủ (`pending_qr_collection`):** `90 triệu − 75 triệu = 15 triệu đồng`
 - **Tổng còn phải thu của đơn hợp lệ (`remaining_receivable`):** `100 triệu − 75 triệu = 25 triệu đồng`
 - **Tiền ngân hàng chưa phân bổ (`unallocated_bank_tx_total`):** `5 triệu đồng`
+
