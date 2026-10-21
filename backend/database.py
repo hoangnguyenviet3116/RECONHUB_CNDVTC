@@ -1,1 +1,23 @@
-# [P1-04] Cấu hình SQLAlchemy Engine & SessionLocal kết nối Microsoft SQL Server
+import os
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
+from dotenv import load_dotenv
+
+load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+# Khởi tạo engine kết nối SQL Server
+engine = create_engine(DATABASE_URL, echo=True) # echo=True để in log SQL ra terminal dễ debug
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+Base = declarative_base()
+
+# Dependency để lấy DB session cho các API
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
