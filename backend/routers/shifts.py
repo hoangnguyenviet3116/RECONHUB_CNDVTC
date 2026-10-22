@@ -1,28 +1,39 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 import models, schemas
 from database import get_db
 from dependencies import verify_merchant_user
+from routers.dashboard import get_dashboard_summary
 
 router = APIRouter(
     prefix="/shifts",
     tags=["Shifts"],
-    dependencies=[Depends(verify_merchant_user)] # P1-04: Yêu cầu phân quyền cho mọi API trong router này
+    dependencies=[Depends(verify_merchant_user)]
 )
 
-@router.post("/", response_model=schemas.ShiftResponse, status_code=201)
-def create_shift(shift: schemas.ShiftCreate, db: Session = Depends(get_db)):
-    """P1-08: Mở ca làm việc mới"""
-    # Kiểm tra mã ca đã tồn tại chưa
-    db_shift = db.query(models.Shift).filter(models.Shift.shift_code == shift.shift_code).first()
-    if db_shift:
-        raise HTTPException(status_code=400, detail="Mã ca làm việc đã tồn tại")
-    
+
+@router.post("/", response_model=schemas.ShiftResponse, status_code=status.HTTP_201_CREATED)
+def create_shift(
+    shift: schemas.ShiftCreate,
+    db: Session = Depends(get_db),
+    user_info: dict = Depends(verify_merchant_user)
+):
+    if shift.merchant_id != user_info["merchant_id"]:
+        raise HTTPException(status_code=403, detail="Không được phép mở ca cho cửa hàng khác.")
+
+    if shift.end_time <= shift.start_time:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Thời gian kết thúc ca phải sau thời gian bắt đầu ca."
+        )
+
     new_shift = models.Shift(
         merchant_id=shift.merchant_id,
-        shift_code=shift.shift_code,
+        name=shift.name,
         target_revenue=shift.target_revenue,
+        start_time=shift.start_time,
+        end_time=shift.end_time,
         status=models.ShiftStatus.OPEN
     )
     db.add(new_shift)
@@ -30,16 +41,39 @@ def create_shift(shift: schemas.ShiftCreate, db: Session = Depends(get_db)):
     db.refresh(new_shift)
     return new_shift
 
+
 @router.get("/", response_model=List[schemas.ShiftResponse])
-def get_shifts(db: Session = Depends(get_db)):
-    """P1-07: Lấy danh sách ca làm việc"""
-    shifts = db.query(models.Shift).all()
-    return shifts
+def get_shifts(
+    db: Session = Depends(get_db),
+    user_info: dict = Depends(verify_merchant_user)
+):
+    query = db.query(models.Shift).filter(models.Shift.merchant_id == user_info["merchant_id"])
+    return query.order_by(models.Shift.id.desc()).all()
+
 
 @router.get("/{shift_id}", response_model=schemas.ShiftResponse)
-def get_shift(shift_id: int, db: Session = Depends(get_db)):
-    """P1-07: Lấy thông tin chi tiết một ca làm việc"""
-    shift = db.query(models.Shift).filter(models.Shift.id == shift_id).first()
+def get_shift(
+    shift_id: int,
+    db: Session = Depends(get_db),
+    user_info: dict = Depends(verify_merchant_user)
+):
+    shift = db.query(models.Shift).filter(
+        models.Shift.id == shift_id,
+        models.Shift.merchant_id == user_info["merchant_id"]
+    ).first()
+
     if not shift:
-         raise HTTPException(status_code=404, detail="Không tìm thấy ca làm việc")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy ca làm việc hoặc bạn không có quyền truy cập."
+        )
     return shift
+
+
+@router.get("/{shift_id}/finance-summary")
+def get_shift_finance_summary(
+    shift_id: int,
+    db: Session = Depends(get_db),
+    user_info: dict = Depends(verify_merchant_user)
+):
+    return get_dashboard_summary(shift_id=shift_id, db=db, user_info=user_info)

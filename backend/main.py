@@ -1,29 +1,36 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
-import models
-from database import engine
-from routers import shifts
+from config import settings
 
-# Load biến môi trường
-load_dotenv()
+from routers import shifts, orders, payment_requests, webhooks, mock_bank, decisions, dashboard
 
-# Tự động tạo bảng trong DB nếu chưa có
-models.Base.metadata.create_all(bind=engine)
+app = FastAPI(
+    title="VietQR ReconHub API",
+    version="1.0.0",
+    description="API cho hệ thống mô phỏng đối soát VietQR (Giai đoạn 1)"
+)
 
-# Khởi tạo biến app (Lỗi của bạn nằm ở việc Uvicorn không tìm thấy dòng này)
-app = FastAPI(title="VietQR ReconHub API", version="1.0.0")
-
+# Nhóm 1: Giới hạn CORS cụ thể cho Frontend thay vì dùng ["*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://127.0.0.1:5500", 
+        "http://localhost:5500", 
+        "http://127.0.0.1:3000", 
+        "http://localhost:3000"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Đăng ký các router
 app.include_router(shifts.router)
+app.include_router(orders.router)
+app.include_router(payment_requests.router)
+app.include_router(webhooks.router)
+app.include_router(mock_bank.router)
+app.include_router(decisions.router)
+app.include_router(dashboard.router)
 
 @app.get("/health", tags=["System"])
 def check_health():

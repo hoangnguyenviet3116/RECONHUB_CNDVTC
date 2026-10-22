@@ -1,16 +1,27 @@
-from fastapi import Header, HTTPException
+from fastapi import Header, HTTPException, Depends
+from sqlalchemy.orm import Session
+import models
+from database import get_db
 
-async def verify_merchant_user(merchant_id: int = Header(..., description="ID của cửa hàng"), user_id: int = Header(..., description="ID của người dùng")):
-    """
-    Middleware/Dependency kiểm tra quyền truy cập cửa hàng.
-    Trong MVP, ta giả lập lấy từ Header. Nếu trái cửa hàng sẽ trả về 403.
-    """
-    # TODO: Khi có DB, truy vấn bảng merchant_users để kiểm tra user_id có thuộc merchant_id không.
-    # user_role = db.query(MerchantUser).filter_by(merchant_id=merchant_id, user_id=user_id).first()
-    
-    # Mock validation tạm thời
+def verify_merchant_user(
+    merchant_id: int = Header(..., description="ID của cửa hàng"),
+    user_id: int = Header(..., description="ID của người dùng"),
+    db: Session = Depends(get_db)
+):
     if not merchant_id or not user_id:
-         raise HTTPException(status_code=403, detail="Forbidden: Thiếu thông tin xác thực cửa hàng.")
+        raise HTTPException(status_code=403, detail="Forbidden: Thiếu thông tin merchant_id hoặc user_id")
     
-    # Trả về thông tin giả lập để các API khác dùng
-    return {"merchant_id": merchant_id, "user_id": user_id, "role": "OWNER"}
+    # Nhóm 1: Kiểm tra thực tế trong CSDL
+    user_access = db.query(models.MerchantUser).filter(
+        models.MerchantUser.merchant_id == merchant_id,
+        models.MerchantUser.user_id == user_id
+    ).first()
+    
+    if not user_access:
+        raise HTTPException(status_code=403, detail="Forbidden: Người dùng không thuộc cửa hàng này hoặc không có quyền truy cập")
+    
+    return {
+        "merchant_id": merchant_id, 
+        "user_id": user_id, 
+        "role": user_access.role
+    }
