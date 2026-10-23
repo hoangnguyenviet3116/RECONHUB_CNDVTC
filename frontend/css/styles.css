@@ -1,1 +1,447 @@
-/* [P1-05] CSS tùy chỉnh giao diện bổ trợ cho Bootstrap 5 */
+/* ==========================================================================
+   VIETQR RECONHUB — GIAO DIỆN TỐI GIẢN, DỄ HIỂU THEO TỪNG BƯỚC
+   Font chữ chuẩn Tiếng Việt: Be Vietnam Pro & Inter
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+    --fp-bg-base: #f1f5f9;
+    --fp-bg-soft: #e2e8f0;
+    --fp-bg-card: #ffffff;
+
+    --fp-primary: #2563eb;
+    --fp-primary-hover: #1d4ed8;
+    --fp-primary-soft: #eff6ff;
+    --fp-dark: #0f172a;
+
+    --fp-text-primary: #0f172a;
+    --fp-text-secondary: #475569;
+    --fp-text-muted: #64748b;
+
+    --fp-border: #e2e8f0;
+    --fp-border-strong: #cbd5e1;
+
+    --fp-success: #059669;
+    --fp-success-soft: #ecfdf5;
+    --fp-success-border: #a7f3d0;
+
+    --fp-warning: #d97706;
+    --fp-warning-soft: #fffbeb;
+    --fp-warning-border: #fde68a;
+
+    --fp-danger: #e11d48;
+    --fp-danger-soft: #fff1f2;
+    --fp-danger-border: #fecdd3;
+
+    --fp-info: #0284c7;
+
+    --fp-radius-sm: 10px;
+    --fp-radius-md: 14px;
+    --fp-radius-lg: 18px;
+    --fp-radius-pill: 9999px;
+
+    --fp-shadow-xs: 0 1px 3px rgba(15, 23, 42, 0.05);
+    --fp-shadow-sm: 0 4px 16px rgba(15, 23, 42, 0.06);
+    --fp-shadow-md: 0 10px 25px rgba(37, 99, 235, 0.1);
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Be Vietnam Pro', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 0.94rem;
+    color: var(--fp-text-primary);
+    background-color: var(--fp-bg-base);
+    line-height: 1.6;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Be Vietnam Pro', 'Inter', sans-serif;
+    font-weight: 700;
+    color: var(--fp-text-primary);
+    line-height: 1.35;
+}
+
+.font-numeric {
+    font-family: 'Inter', 'Be Vietnam Pro', sans-serif;
+    font-variant-numeric: tabular-nums;
+}
+
+.hi-icon {
+    width: 1.15rem;
+    height: 1.15rem;
+    stroke: currentColor;
+    stroke-width: 1.9;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+    vertical-align: middle;
+}
+
+.hi-icon-sm {
+    width: 0.98rem;
+    height: 0.98rem;
+}
+
+/* ==========================================================================
+   1. THANH MENU TRÊN CÙNG & THANH DẪN ĐƯỜNG 5 BƯỚC (STEPPER BAR)
+   ========================================================================== */
+.fp-navbar {
+    background-color: #ffffff;
+    border-bottom: 1px solid var(--fp-border);
+    padding: 0.65rem 0;
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+}
+
+.fp-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--fp-text-primary);
+    text-decoration: none;
+}
+
+.fp-brand-mark {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.role-pill-select {
+    border-radius: var(--fp-radius-sm);
+    border: 1px solid #bfdbfe;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    background-color: var(--fp-primary-soft);
+    color: #1e40af;
+    cursor: pointer;
+}
+
+/* Thanh 5 bước quy trình */
+.step-guide-wrapper {
+    background-color: #ffffff;
+    border-bottom: 1px solid var(--fp-border);
+    padding: 0.75rem 0;
+    box-shadow: var(--fp-shadow-xs);
+}
+
+.step-pills-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.5rem;
+}
+
+.step-pill-item {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: var(--fp-radius-sm);
+    border: 1px solid var(--fp-border);
+    background-color: #f8fafc;
+    color: var(--fp-text-secondary);
+    text-decoration: none;
+    font-size: 0.82rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.step-pill-item:hover {
+    border-color: var(--fp-primary);
+    background-color: var(--fp-primary-soft);
+    color: var(--fp-primary);
+}
+
+.step-pill-item.active {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    border-color: #1d4ed8;
+    color: #ffffff;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.22);
+}
+
+.step-pill-num {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: #e2e8f0;
+    color: #334155;
+    font-weight: 700;
+    font-size: 0.76rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.step-pill-item.active .step-pill-num {
+    background-color: #ffffff;
+    color: #1d4ed8;
+}
+
+/* Hộp chỉ dẫn: "Việc cần làm ở bước này" */
+.step-instruction-banner {
+    margin-top: 0.65rem;
+    padding: 0.65rem 1rem;
+    border-radius: var(--fp-radius-sm);
+    background-color: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1e3a8a;
+    font-size: 0.86rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+/* ==========================================================================
+   2. NÚT BẤM & THẺ NỘI DUNG
+   ========================================================================== */
+.btn-fp-dark, .btn-fp-primary {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: #ffffff;
+    border: 1px solid #1d4ed8;
+    border-radius: var(--fp-radius-sm);
+    padding: 0.6rem 1.25rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.18);
+    transition: all 0.2s ease;
+}
+
+.btn-fp-dark:hover, .btn-fp-primary:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.btn-fp-success {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    color: #ffffff;
+    border: 1px solid #047857;
+    border-radius: var(--fp-radius-sm);
+    padding: 0.65rem 1.35rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    box-shadow: 0 4px 14px rgba(5, 150, 105, 0.22);
+    transition: all 0.2s ease;
+}
+
+.btn-fp-success:hover {
+    background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.btn-fp-outline {
+    background-color: #ffffff;
+    color: var(--fp-text-primary);
+    border: 1px solid var(--fp-border-strong);
+    border-radius: var(--fp-radius-sm);
+    padding: 0.56rem 1.1rem;
+    font-size: 0.86rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.btn-fp-outline:hover {
+    border-color: var(--fp-primary);
+    color: var(--fp-primary);
+    background-color: var(--fp-primary-soft);
+}
+
+.recon-workspace-card {
+    background-color: #ffffff;
+    border: 1px solid var(--fp-border);
+    border-radius: var(--fp-radius-lg);
+    box-shadow: var(--fp-shadow-sm);
+    padding: 1.5rem;
+}
+
+.kpi-metric-card {
+    background-color: #ffffff;
+    border: 1px solid var(--fp-border);
+    border-left: 4px solid var(--fp-primary);
+    border-radius: var(--fp-radius-md);
+    padding: 1.2rem;
+    height: 100%;
+    box-shadow: var(--fp-shadow-xs);
+}
+
+.kpi-metric-card.kpi-dark {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    border-color: #047857;
+    border-left: 4px solid #34d399;
+    color: #ffffff;
+}
+
+.kpi-border-blue { border-left-color: var(--fp-primary) !important; }
+.kpi-border-cyan { border-left-color: var(--fp-info) !important; }
+.kpi-border-emerald { border-left-color: var(--fp-success) !important; }
+.kpi-border-amber { border-left-color: var(--fp-warning) !important; }
+.kpi-border-rose { border-left-color: var(--fp-danger) !important; }
+
+/* Khung giả lập Điện thoại Ngân hàng (Cho Bước 3) */
+.phone-banking-card {
+    max-width: 520px;
+    margin: 0 auto;
+    background: #ffffff;
+    border: 2px solid #cbd5e1;
+    border-radius: 24px;
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+    overflow: hidden;
+}
+
+.phone-banking-header {
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+    color: #ffffff;
+    padding: 1.25rem 1.5rem;
+}
+
+.scenario-choice-btn {
+    border: 1.5px solid var(--fp-border);
+    border-radius: 12px;
+    background: #ffffff;
+    padding: 0.75rem;
+    text-align: left;
+    width: 100%;
+    transition: all 0.18s ease;
+    cursor: pointer;
+}
+
+.scenario-choice-btn:hover,
+.scenario-choice-btn.active {
+    border-color: var(--fp-primary);
+    background-color: var(--fp-primary-soft);
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.1);
+}
+
+/* ==========================================================================
+   3. NHÃN TRẠNG THÁI & BẢNG DỮ LIỆU
+   ========================================================================== */
+.fp-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.72rem;
+    border-radius: var(--fp-radius-pill);
+    font-size: 0.76rem;
+    font-weight: 600;
+}
+
+.fp-badge-success {
+    background-color: var(--fp-success-soft);
+    color: #065f46;
+    border: 1px solid var(--fp-success-border);
+}
+
+.fp-badge-warning {
+    background-color: var(--fp-warning-soft);
+    color: #92400e;
+    border: 1px solid var(--fp-warning-border);
+}
+
+.fp-badge-danger {
+    background-color: var(--fp-danger-soft);
+    color: #9f1239;
+    border: 1px solid var(--fp-danger-border);
+}
+
+.fp-badge-neutral {
+    background-color: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+}
+
+.fp-badge-dark {
+    background-color: var(--fp-primary-soft);
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+.fp-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.fp-table thead th {
+    background-color: #f8fafc;
+    color: #334155;
+    font-weight: 600;
+    font-size: 0.8rem;
+    padding: 0.85rem 1rem;
+    border-bottom: 2px solid var(--fp-border);
+}
+
+.fp-table tbody td {
+    padding: 0.9rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--fp-border);
+    font-size: 0.88rem;
+    background-color: #ffffff;
+}
+
+.qr-frame-box {
+    max-width: 250px;
+    margin: 0 auto;
+    padding: 0.85rem;
+    background: #ffffff;
+    border: 2px solid var(--fp-primary);
+    border-radius: var(--fp-radius-md);
+}
+
+#toast-container {
+    position: fixed;
+    top: 76px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: 380px;
+}
+
+@media (max-width: 991.98px) {
+    .step-pills-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 575.98px) {
+    .step-pills-row {
+        grid-template-columns: 1fr;
+    }
+}

@@ -1,1 +1,276 @@
-<!-- [P1-05, P1-15] Trung tâm Đối soát ngoại lệ & Đảo bút toán tích hợp WebAuthn -->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đối Soát Giao Dịch Lệch — VietQR ReconHub</title>
+
+    <!-- Google Fonts: Be Vietnam Pro & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/styles.css" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Thanh điều hướng ứng dụng -->
+    <div id="app-navbar"></div>
+
+    <main class="py-4">
+        <div class="container">
+
+            <!-- KHỐI LÀM VIỆC CHÍNH GỌN GÀNG THEO TAB -->
+            <section class="recon-workspace-card" data-gsap="card">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-3 mb-3 border-bottom">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <h1 class="h5 fw-bold mb-0">Đối Soát Giao Dịch &amp; Điều Chỉnh Sổ Quỹ</h1>
+                            <span class="fp-badge fp-badge-neutral" id="webauthn-status-badge">
+                                <span id="webauthn-status-text">Chưa kích hoạt khóa bảo mật</span>
+                            </span>
+                        </div>
+                        <p class="text-secondary small mb-0">
+                            Xử lý các khoản chuyển khoản khách quên ghi mã đơn hàng hoặc hoàn đảo các bút toán đã ghép.
+                        </p>
+                    </div>
+
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <button type="button" class="btn-fp-outline py-1 px-3" style="font-size: 0.82rem;" id="btn-webauthn-register">
+                            <svg class="hi-icon hi-icon-sm" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M7.864 4.243A7.5 7.5 0 0 1 19.5 10.5c0 2.92-.556 5.709-1.568 8.268M5.742 6.364A7.465 7.465 0 0 0 4.5 10.5a7.464 7.464 0 0 1-1.15 3.993m1.989 3.559A11.209 11.209 0 0 0 8.25 10.5a3.75 3.75 0 1 1 7.5 0c0 .527-.021 1.049-.064 1.565M12 10.5a14.94 14.94 0 0 1-3.6 9.75m6.633-4.596a18.666 18.666 0 0 1-2.485 5.33" />
+                            </svg>
+                            <span>Đăng ký khóa bảo mật</span>
+                        </button>
+                        <button type="button" class="btn-fp-outline py-1 px-3" style="font-size: 0.82rem;" id="btn-recon-refresh">
+                            ↻ Làm mới
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Thanh chuyển đổi 3 Tab nghiệp vụ -->
+                <ul class="nav nav-pills gap-2 mb-3" id="reconTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-semibold small py-2 px-3" id="tab-unmatched-btn" data-bs-toggle="pill" data-bs-target="#pane-unmatched" type="button" role="tab">
+                            Khoản tiền chờ ghép đơn
+                            <span class="badge bg-danger text-white rounded-pill ms-1" id="badge-unmatched-count">1</span>
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-semibold small py-2 px-3" id="tab-allocated-btn" data-bs-toggle="pill" data-bs-target="#pane-allocated" type="button" role="tab">
+                            Các khoản đã khớp &amp; Hoàn đảo
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-semibold small py-2 px-3" id="tab-history-btn" data-bs-toggle="pill" data-bs-target="#pane-history" type="button" role="tab">
+                            Lịch sử phê duyệt
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Nội dung từng Tab -->
+                <div class="tab-content">
+
+                    <!-- TAB 1: DANH SÁCH GIAO DỊCH CHỜ GHÉP ĐƠN -->
+                    <div class="tab-pane fade show active" id="pane-unmatched" role="tabpanel">
+                        <div class="table-responsive">
+                            <table class="fp-table">
+                                <thead>
+                                    <tr>
+                                        <th>Mã giao dịch</th>
+                                        <th>Nội dung chuyển khoản</th>
+                                        <th class="text-end">Tổng tiền nhận</th>
+                                        <th class="text-end">Số tiền chờ ghép</th>
+                                        <th>Trạng thái</th>
+                                        <th class="text-end">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recon-unmatched-tbody">
+                                    <tr>
+                                        <td colspan="6" class="text-center py-4 text-secondary">
+                                            Đang tải danh sách giao dịch...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: CÁC KHOẢN ĐÃ KHỚP & HOÀN ĐẢO -->
+                    <div class="tab-pane fade" id="pane-allocated" role="tabpanel">
+                        <div class="table-responsive">
+                            <table class="fp-table">
+                                <thead>
+                                    <tr>
+                                        <th>Mã bút toán</th>
+                                        <th>Giao dịch chuyển khoản</th>
+                                        <th>Hóa đơn nhận tiền</th>
+                                        <th>Loại ghi nhận</th>
+                                        <th class="text-end">Số tiền</th>
+                                        <th class="text-end">Điều chỉnh</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recon-allocations-tbody">
+                                    <tr>
+                                        <td colspan="6" class="text-center py-4 text-secondary">
+                                            Đang tải danh sách bút toán...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- TAB 3: LỊCH SỬ PHÊ DUYỆT CỦA KẾ TOÁN -->
+                    <div class="tab-pane fade" id="pane-history" role="tabpanel">
+                        <div id="recon-decisions-list" class="d-flex flex-column gap-2">
+                            <div class="text-center py-4 text-secondary small">
+                                Đang tải lịch sử phê duyệt...
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- =======================================================================
+         HỘP THOẠI 1: GHÉP KHOẢN TIỀN VÀO HÓA ĐƠN (KHI BẤM NÚT TRÊN DÒNG)
+         ======================================================================= -->
+    <div class="modal fade" id="manualMatchModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 18px;">
+                <div class="modal-header border-bottom pb-3 pt-4 px-4">
+                    <div>
+                        <span class="fp-badge fp-badge-dark mb-1">Xử lý tiền chờ đối soát</span>
+                        <h2 class="h5 fw-bold mb-0">Ghép Khoản Tiền Vào Hóa Đơn</h2>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+
+                <div class="modal-body px-4 pb-4 pt-3">
+                    <form id="form-manual-match" novalidate>
+                        <input type="hidden" id="match-tx-id">
+
+                        <!-- Tóm tắt khoản tiền đang chọn -->
+                        <div class="p-3 rounded-3 bg-light border small mb-3">
+                            <div class="d-flex justify-content-between py-1 border-bottom">
+                                <span class="text-secondary">Mã giao dịch ngân hàng:</span>
+                                <strong id="match-tx-code" class="font-numeric">FT2629400103</strong>
+                            </div>
+                            <div class="d-flex justify-content-between py-1 border-bottom">
+                                <span class="text-secondary">Nội dung khách ghi:</span>
+                                <strong id="match-tx-content">NGUYEN VAN A CHUYEN KHOAN</strong>
+                            </div>
+                            <div class="d-flex justify-content-between pt-1">
+                                <span class="text-secondary">Số tiền còn chờ ghép:</span>
+                                <strong id="match-tx-unallocated" class="text-danger fs-6 font-numeric">5.000.000 ₫</strong>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="match-order-select" class="form-label small fw-semibold">Chọn hóa đơn nhận tiền <span class="text-danger">*</span></label>
+                            <select id="match-order-select" class="form-select" required></select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="match-amount-input" class="form-label small fw-semibold">Số tiền ghép vào hóa đơn (VNĐ) <span class="text-danger">*</span></label>
+                            <input type="number" id="match-amount-input" class="form-control fw-bold font-numeric text-primary" required min="1000" step="1000">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="match-reason-input" class="form-label small fw-semibold">Lý do xác nhận <span class="text-danger">*</span></label>
+                            <textarea id="match-reason-input" class="form-control" rows="2" required>Khách hàng xác nhận chuyển khoản thanh toán cho hóa đơn nhưng quên ghi mã đơn.</textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="match-security-mode" class="form-label small text-secondary mb-1">Xác thực phê duyệt</label>
+                            <select id="match-security-mode" class="form-select form-select-sm">
+                                <option value="WEBAUTHN_SIGN">Xác nhận bằng khóa bảo mật thiết bị (Vân tay / Mã PIN)</option>
+                                <option value="BYPASS_WEBAUTHN_TEST">Thử nghiệm: Gửi yêu cầu không qua khóa bảo mật</option>
+                            </select>
+                        </div>
+
+                        <div id="match-error-box" class="alert alert-danger py-2 px-3 small d-none" role="alert"></div>
+
+                        <div class="d-flex justify-content-end gap-2 mt-3">
+                            <button type="button" class="btn-fp-outline" data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" class="btn-fp-success" id="btn-confirm-match">
+                                Xác nhận ghép vào đơn
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =======================================================================
+         HỘP THOẠI 2: ĐẢO / HỦY KHOẢN TIỀN ĐÃ GHÉP (KHI BẤM NÚT ĐẢO GIAO DỊCH)
+         ======================================================================= -->
+    <div class="modal fade" id="reverseAllocModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 18px;">
+                <div class="modal-header border-bottom pb-3 pt-4 px-4">
+                    <div>
+                        <span class="fp-badge fp-badge-danger mb-1">Điều chỉnh bút toán sổ quỹ</span>
+                        <h2 class="h5 fw-bold mb-0">Đảo Giao Dịch Đã Khớp</h2>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+
+                <div class="modal-body px-4 pb-4 pt-3">
+                    <form id="form-reverse-alloc" novalidate>
+                        <input type="hidden" id="reverse-alloc-id">
+
+                        <div class="p-3 rounded-3 bg-light border small mb-3">
+                            <div class="d-flex justify-content-between py-1 border-bottom">
+                                <span class="text-secondary">Bút toán cần đảo:</span>
+                                <strong id="reverse-alloc-label">Bút toán #1</strong>
+                            </div>
+                            <div class="d-flex justify-content-between pt-1">
+                                <span class="text-secondary">Số tiền hoàn lại chờ xử lý:</span>
+                                <strong id="reverse-alloc-amount" class="text-danger fs-6 font-numeric">35.000.000 ₫</strong>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="reverse-reason-input" class="form-label small fw-semibold">Lý do đảo giao dịch <span class="text-danger">*</span></label>
+                            <textarea id="reverse-reason-input" class="form-control" rows="2" required>Đảo lại khoản tiền do ghép nhầm hóa đơn để phân bổ lại cho đúng.</textarea>
+                        </div>
+
+                        <div id="reverse-error-box" class="alert alert-danger py-2 px-3 small d-none" role="alert"></div>
+
+                        <div class="d-flex justify-content-end gap-2 mt-3">
+                            <button type="button" class="btn-fp-outline" data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" class="btn-fp-dark" id="btn-confirm-reverse">
+                                Xác nhận đảo bút toán
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-footer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/webauthn.js"></script>
+    <script src="js/reconciliation.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            renderNavbar("reconcile");
+            renderFooter();
+            initPageAnimations();
+            initReconciliationPage();
+        });
+    </script>
+</body>
+</html>
