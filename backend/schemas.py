@@ -20,6 +20,7 @@ class ShiftCreate(ShiftBase):
 class ShiftResponse(ShiftBase):
     id: int
     status: ShiftStatus
+    closed_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -54,7 +55,9 @@ class OrderResponse(BaseModel):
     qr_status: Optional[str] = None
     active_qr: Optional[Any] = None
     qr_request: Optional[Any] = None
-
+    paid_at: Optional[datetime] = None
+    last_transfer_content: Optional[str] = None
+    
     class Config:
         from_attributes = True
 

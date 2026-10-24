@@ -5,11 +5,32 @@ from database import get_db
 from dependencies import verify_merchant_user
 from routers import shifts, orders, payment_requests, webhooks, mock_bank, decisions, dashboard
 
+import asyncio
+from database import SessionLocal
+from services.shift_service import auto_close_expired_shifts
+
 app = FastAPI(
     title="VietQR ReconHub API",
     version="1.0.0",
     description="API cho hệ thống mô phỏng đối soát VietQR (Giai đoạn 1)"
 )
+
+async def background_shift_monitor():
+    """Tác vụ nền tự động kiểm tra và đóng các ca làm việc đã quá giờ kết thúc mỗi 10 giây"""
+    while True:
+        try:
+            db = SessionLocal()
+            try:
+                auto_close_expired_shifts(db)
+            finally:
+                db.close()
+        except Exception:
+            pass
+        await asyncio.sleep(10)
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(background_shift_monitor())
 
 app.add_middleware(
     CORSMiddleware,

@@ -17,15 +17,29 @@ router = APIRouter(
 def enrich_order(db: Session, order: models.Order) -> dict:
     allocs = db.query(models.PaymentAllocation).filter(
         models.PaymentAllocation.order_id == order.id
-    ).all()
+    ).order_by(models.PaymentAllocation.id.desc()).all()
     paid = sum((Decimal(str(a.allocated_amount)) for a in allocs), Decimal("0.00"))
     total = Decimal(str(order.total_amount))
     remaining = max(Decimal("0.00"), total - paid)
 
-    # Tính số tiền chuyển thừa (overpaid_amount) từ các giao dịch ngân hàng gắn với đơn này để loa TTS đọc thông báo TC-04
     overpaid = Decimal("0.00")
-    tx_ids = {a.bank_transaction_id for a in allocs if Decimal(str(a.allocated_amount)) > Decimal("0.00")}
-    if tx_ids:
+    last_paid_at = None
+    last_transfer_content = f"TT {order.order_code}"
+
+    positive_allocs = [a for a in allocs if Decimal(str(a.allocated_amount)) > Decimal("0.00")]
+    if positive_allocs:
+        latest_alloc = positive_allocs[0]
+        last_paid_at = latest_alloc.created_at
+        latest_tx = db.query(models.BankTransaction).filter(
+            models.BankTransaction.id == latest_alloc.bank_transaction_id
+        ).first()
+        if latest_tx:
+            if latest_tx.created_at:
+                last_paid_at = latest_tx.created_at
+            if latest_tx.transfer_content:
+                last_transfer_content = latest_tx.transfer_content
+
+        tx_ids = {a.bank_transaction_id for a in positive_allocs}
         txs = db.query(models.BankTransaction).filter(models.BankTransaction.id.in_(tx_ids)).all()
         overpaid = sum((Decimal(str(t.unallocated_amount)) for t in txs), Decimal("0.00"))
 
@@ -63,6 +77,8 @@ def enrich_order(db: Session, order: models.Order) -> dict:
         "order_status": order.order_status,
         "payment_status": order.payment_status,
         "created_at": order.created_at,
+        "paid_at": last_paid_at or order.created_at,
+        "last_transfer_content": last_transfer_content,
         "allocated_amount": paid,
         "paid_amount": paid,
         "net_paid_amount": paid,
@@ -76,23 +92,15 @@ def enrich_order(db: Session, order: models.Order) -> dict:
     }
 
 
+@router.post("", response_model=schemas.OrderResponse, status_code=status.HTTP_201_CREATED)
 @router.post("/", response_model=schemas.OrderResponse, status_code=status.HTTP_201_CREATED)
 def create_order(
     order: schemas.OrderCreate,
     db: Session = Depends(get_db),
     user_info: dict = Depends(verify_merchant_user)
 ):
-    shift = db.query(models.Shift).filter(models.Shift.id == order.shift_id).first()
-    if not shift:
-        shift = db.query(models.Shift).filter(
-            models.Shift.status == models.ShiftStatus.OPEN
-        ).order_by(models.Shift.id.asc()).first()
-
-    if not shift:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Ca làm việc không tồn tại hoặc đã đóng."
-        )
+    from services.shift_service import validate_shift_for_order
+    shift = validate_shift_for_order(db=db, shift_id=order.shift_id)
 
     custom_code = (order.order_code or "").strip().upper()
     if custom_code:
@@ -127,6 +135,7 @@ def create_order(
     return enrich_order(db, new_order)
 
 
+@router.get("", response_model=List[schemas.OrderResponse])
 @router.get("/", response_model=List[schemas.OrderResponse])
 def get_orders(
     shift_id: Optional[int] = None,
