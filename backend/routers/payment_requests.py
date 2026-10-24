@@ -59,6 +59,18 @@ def create_payment_request(
             detail="Đơn hàng không tồn tại."
         )
 
+    if order.shift_id:
+        from services.shift_service import get_current_vn_naive, auto_close_expired_shifts
+        auto_close_expired_shifts(db)
+        shift = db.query(models.Shift).filter(models.Shift.id == order.shift_id).first()
+        if shift:
+            now_vn = get_current_vn_naive()
+            if shift.status == models.ShiftStatus.CLOSED or (shift.end_time and shift.end_time <= now_vn):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Ca làm việc của đơn hàng {order.order_code} đã đóng hoặc hết hạn, không thể phát hành mã QR mới."
+                )
+
     if order.order_status not in [models.OrderStatus.CONFIRMED_ORDER, models.OrderStatus.UNDER_REVIEW]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

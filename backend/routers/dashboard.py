@@ -118,37 +118,70 @@ def verify_ledger_hash_chain(
 
 @router.get("/summary")
 def get_dashboard_summary(
-    shift_id: Optional[str] = "1",
+    shift_id: Optional[str] = None,
     db: Session = Depends(get_db),
     user_info: dict = Depends(verify_merchant_user)
 ):
-    open_shift = db.query(models.Shift).filter(
-        models.Shift.status == models.ShiftStatus.OPEN
-    ).order_by(models.Shift.id.asc()).first()
-
-    if not open_shift:
-        open_shift = db.query(models.Shift).order_by(models.Shift.id.asc()).first()
-
-    if not open_shift:
+    from services.shift_service import auto_close_expired_shifts
+    auto_close_expired_shifts(db)
+    all_shifts = db.query(models.Shift).order_by(models.Shift.id.asc()).all()
+    if not all_shifts:
         raise HTTPException(status_code=404, detail="Chưa có ca làm việc nào trong hệ thống.")
 
-    if shift_id and str(shift_id).upper() != "ALL" and str(shift_id).isdigit():
+    # Xác định ca làm việc cần đối soát:
+    # 1. "ALL": Tổng hợp toàn bộ các ca
+    # 2. Mã số cụ thể (VD: "1", "3"): Lấy đúng ca tương ứng
+    # 3. None/Trống: Ưu tiên ca đang OPEN mới nhất, nếu không có lấy ca đầu tiên
+    selected_shift = None
+    is_all_shifts = False
+
+    if shift_id and str(shift_id).strip().upper() == "ALL":
+        is_all_shifts = True
+        shift_id_res = "ALL"
+        shift_name_res = "Tất cả ca bán hàng"
+        target_rev = sum((Decimal(str(s.target_revenue)) for s in all_shifts), Decimal("0.00"))
+        orders_query = db.query(models.Order)
+    elif shift_id and str(shift_id).strip().isdigit():
         s_id = int(shift_id)
-        valid_orders = db.query(models.Order).filter(
-            models.Order.shift_id == s_id,
-            models.Order.order_status.in_([models.OrderStatus.CONFIRMED_ORDER, models.OrderStatus.UNDER_REVIEW])
-        ).all()
-        if not valid_orders and s_id in [0, 1]:
-            valid_orders = db.query(models.Order).filter(
-                models.Order.order_status.in_([models.OrderStatus.CONFIRMED_ORDER, models.OrderStatus.UNDER_REVIEW])
-            ).all()
+        selected_shift = db.query(models.Shift).filter(models.Shift.id == s_id).first()
+        if not selected_shift:
+            shift_id_res = s_id
+            shift_name_res = f'Ca {s_id}'
+            target_rev = Decimal('0.00')
+            orders_query = db.query(models.Order).filter(models.Order.shift_id == s_id)
+        else:
+            shift_id_res = selected_shift.id
+            shift_name_res = selected_shift.name
+            target_rev = Decimal(str(selected_shift.target_revenue))
+            orders_query = db.query(models.Order).filter(models.Order.shift_id == selected_shift.id)
     else:
-        valid_orders = db.query(models.Order).filter(
-            models.Order.order_status.in_([models.OrderStatus.CONFIRMED_ORDER, models.OrderStatus.UNDER_REVIEW])
-        ).all()
+        # Mặc định lấy ca đang OPEN mới nhất hoặc ca 1
+        open_shift = db.query(models.Shift).filter(
+            models.Shift.status == models.ShiftStatus.OPEN
+        ).order_by(models.Shift.id.desc()).first()
+        if not open_shift:
+            open_shift = all_shifts[0]
+        selected_shift = open_shift
+        shift_id_res = selected_shift.id
+        shift_name_res = selected_shift.name
+        target_rev = Decimal(str(selected_shift.target_revenue))
+        orders_query = db.query(models.Order).filter(models.Order.shift_id == selected_shift.id)
+
+    all_orders_in_scope = orders_query.order_by(models.Order.id.desc()).all()
+
+    valid_orders = [
+        o for o in all_orders_in_scope
+        if o.order_status in [models.OrderStatus.CONFIRMED_ORDER, models.OrderStatus.UNDER_REVIEW]
+    ]
+    cancelled_orders = [
+        o for o in all_orders_in_scope
+        if o.order_status == models.OrderStatus.CANCELLED_ORDER
+    ]
 
     valid_order_ids = [o.id for o in valid_orders]
     valid_order_total = sum((Decimal(str(o.total_amount)) for o in valid_orders), Decimal("0.00"))
+    cancelled_order_total = sum((Decimal(str(o.total_amount)) for o in cancelled_orders), Decimal("0.00"))
+    total_order_amount = sum((Decimal(str(o.total_amount)) for o in all_orders_in_scope), Decimal("0.00"))
 
     if valid_order_ids:
         active_qrs = db.query(models.PaymentRequest).filter(
@@ -172,7 +205,6 @@ def get_dashboard_summary(
     ]
 
     unallocated_bank_tx_total = sum((Decimal(str(tx.unallocated_amount)) for tx in unallocated_txs), Decimal("0.00"))
-    target_rev = Decimal(str(open_shift.target_revenue))
 
     chain_check = verify_ledger_hash_chain(db=db, user_info=user_info)
 
@@ -210,16 +242,37 @@ def get_dashboard_summary(
             "review_date": d.review_date
         })
 
+    from routers.orders import enrich_order
+    formatted_orders = [enrich_order(db, o) for o in all_orders_in_scope]
+
+    available_shifts = [
+        {
+            "id": s.id,
+            "name": s.name,
+            "status": s.status.value if hasattr(s.status, "value") else str(s.status),
+            "target_revenue": float(s.target_revenue),
+            "start_time": s.start_time.isoformat() if s.start_time else None,
+            "end_time": s.end_time.isoformat() if s.end_time else None,
+            "closed_at": s.closed_at.isoformat() if s.closed_at else None
+        }
+        for s in all_shifts
+    ]
+
     return {
-        "shift_id": open_shift.id,
-        "shift_name": open_shift.name,
+        "shift_id": shift_id_res,
+        "shift_name": shift_name_res,
         "target_revenue": float(target_rev),
         "valid_order_total": float(valid_order_total),
+        "cancelled_order_total": float(cancelled_order_total),
+        "total_order_amount": float(total_order_amount),
+        "total_order_count": len(all_orders_in_scope),
+        "valid_order_count": len(valid_orders),
+        "cancelled_order_count": len(cancelled_orders),
         "active_qr_request_total": float(active_qr_request_total),
         "allocated_payment_total": float(allocated_payment_total),
-        "unissued_qr_amount": float(valid_order_total - active_qr_request_total),
-        "pending_qr_collection": float(active_qr_request_total - allocated_payment_total),
-        "remaining_receivable": float(valid_order_total - allocated_payment_total),
+        "unissued_qr_amount": float(max(Decimal("0.00"), valid_order_total - active_qr_request_total)),
+        "pending_qr_collection": float(max(Decimal("0.00"), active_qr_request_total - allocated_payment_total)),
+        "remaining_receivable": float(max(Decimal("0.00"), valid_order_total - allocated_payment_total)),
         "unallocated_bank_tx_total": float(unallocated_bank_tx_total),
         "total_bank_received": float(allocated_payment_total + unallocated_bank_tx_total),
         "ledger_integrity_valid": chain_check["is_valid"],
@@ -227,6 +280,8 @@ def get_dashboard_summary(
         "ledger_entries": chain_check["chain_details"],
         "payment_allocations": chain_check["chain_details"],
         "chain_details": chain_check["chain_details"],
+        "orders": formatted_orders,
+        "available_shifts": available_shifts,
         "bank_transactions": bank_tx_list,
         "recent_bank_transactions": bank_tx_list,
         "decisions": decisions_list,
