@@ -50,14 +50,23 @@ def trigger_mock_bank_transfer(payload: dict, db: Session = Depends(get_db)):
     payload_json = json.dumps(payload, sort_keys=True)
     payload_bytes = payload_json.encode("utf-8")
 
+    import time
+    now_ts = time.time()
+    if test_mode == "REPLAY_ATTACK" or payload.get("simulate_replay") is True:
+        # Giả lập bản tin cũ quá hạn (600s trước > 300s tolerance)
+        ts_str = str(now_ts - 600)
+    else:
+        ts_str = str(now_ts)
+
     if is_invalid_hmac:
         signature = "INVALID_TAMPERED_HMAC_SIGNATURE_0000000000000000"
     else:
-        signature = generate_hmac_signature(payload_bytes)
+        signature = generate_hmac_signature(payload_bytes, timestamp=ts_str)
 
     headers = {
         "Content-Type": "application/json",
-        "x-hub-signature": signature
+        "x-hub-signature": signature,
+        "x-hub-timestamp": ts_str
     }
 
     try:
@@ -73,6 +82,8 @@ def trigger_mock_bank_transfer(payload: dict, db: Session = Depends(get_db)):
             "status": "triggered",
             "message": resp_data.get("message", "Đã tiếp nhận bản tin ngân hàng và xử lý phân bổ đối soát."),
             "mock_bank_response_code": response.status_code,
+            "transaction_id": resp_data.get("transaction_id"),
+            "reference_code": resp_data.get("reference_code"),
             "response_data": resp_data
         }
     except HTTPException:

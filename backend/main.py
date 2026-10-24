@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from database import get_db
 from dependencies import verify_merchant_user
-from routers import shifts, orders, payment_requests, webhooks, mock_bank, decisions, dashboard
+from routers import shifts, orders, payment_requests, webhooks, mock_bank, decisions, dashboard, events
 
 import asyncio
 from database import SessionLocal
@@ -47,6 +47,7 @@ app.include_router(webhooks.router)
 app.include_router(mock_bank.router)
 app.include_router(decisions.router)
 app.include_router(dashboard.router)
+app.include_router(events.router)
 
 
 # Các Alias Endpoint giúp tương thích 100% với mọi đường dẫn Fetch API trong frontend/js/*.js của Hoàng
@@ -93,3 +94,4 @@ def alias_shift_finance_summary(shift_id: str, db: Session = Depends(get_db), us
 @app.get("/health", tags=["System"])
 def check_health():
     return {"status": "ok", "message": "VietQR ReconHub API is running smoothly!"}
+
