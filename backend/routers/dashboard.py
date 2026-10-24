@@ -208,8 +208,32 @@ def get_dashboard_summary(
 
     chain_check = verify_ledger_hash_chain(db=db, user_info=user_info)
 
-    bank_tx_list = [
-        {
+    bank_tx_list = []
+    for tx in all_bank_txs:
+        decision = db.query(models.Decision).filter(
+            models.Decision.bank_transaction_id == tx.id
+        ).order_by(models.Decision.id.desc()).first()
+
+        alloc = db.query(models.PaymentAllocation).filter(
+            models.PaymentAllocation.bank_transaction_id == tx.id,
+            models.PaymentAllocation.entry_type == models.EntryType.ALLOCATION
+        ).first()
+        linked_order = db.query(models.Order).filter(models.Order.id == alloc.order_id).first() if alloc else None
+        if not linked_order and tx.transfer_content:
+            for word in (tx.transfer_content or "").upper().replace(",", " ").replace(".", " ").split():
+                if word.startswith("ORD"):
+                    linked_order = db.query(models.Order).filter(models.Order.order_code == word).first()
+                    if linked_order:
+                        break
+
+        is_ovp = False
+        if linked_order:
+            order_is_paid = (linked_order.payment_status == models.PaymentStatus.PAID)
+            if float(tx.allocated_amount or 0) > 0 and float(tx.unallocated_amount or 0) > 0:
+                is_ovp = True
+            elif order_is_paid and float(tx.unallocated_amount or 0) > 0:
+                is_ovp = True
+        bank_tx_list.append({
             "id": tx.id,
             "merchant_id": tx.merchant_id,
             "reference_code": tx.reference_code,
@@ -219,27 +243,38 @@ def get_dashboard_summary(
             "transfer_content": tx.transfer_content,
             "sender_account": tx.sender_account,
             "match_status": tx.match_status.value if hasattr(tx.match_status, "value") else str(tx.match_status),
-            "created_at": tx.created_at
-        }
-        for tx in all_bank_txs
-    ]
+            "created_at": tx.created_at,
+            "order_id": linked_order.id if linked_order else None,
+            "order_code": linked_order.order_code if linked_order else None,
+            "order_amount": float(linked_order.total_amount) if linked_order else None,
+            "is_overpayment": is_ovp,
+            "is_handled": bool(decision is not None),
+            "decision_type": (decision.decision_type.value if hasattr(decision.decision_type, "value") else str(decision.decision_type)) if decision else None,
+            "handling_method": decision.reason if decision else None
+        })
 
     decisions_rows = db.query(models.Decision).order_by(models.Decision.id.desc()).all()
     decisions_list = []
     for d in decisions_rows:
         ord_obj = db.query(models.Order).filter(models.Order.id == d.order_id).first() if d.order_id else None
         tx_obj = db.query(models.BankTransaction).filter(models.BankTransaction.id == d.bank_transaction_id).first() if d.bank_transaction_id else None
+        reviewer_obj = db.query(models.User).filter(models.User.id == d.reviewer_id).first() if d.reviewer_id else None
         decisions_list.append({
             "id": d.id,
             "order_id": d.order_id,
-            "order_code": ord_obj.order_code if ord_obj else f"ORD#{d.order_id}",
+            "order_code": ord_obj.order_code if ord_obj else None,
+            "order_amount": float(ord_obj.total_amount) if ord_obj else None,
             "bank_transaction_id": d.bank_transaction_id,
-            "reference_code": tx_obj.reference_code if tx_obj else f"TX#{d.bank_transaction_id}",
+            "reference_code": tx_obj.reference_code if tx_obj else None,
+            "tx_amount": float(tx_obj.amount) if tx_obj else None,
+            "allocated_amount": float(tx_obj.allocated_amount) if tx_obj else None,
+            "unallocated_amount": float(tx_obj.unallocated_amount) if tx_obj else None,
             "reviewer_id": d.reviewer_id,
+            "reviewer_name": reviewer_obj.full_name if reviewer_obj else f"Nhân viên #{d.reviewer_id}",
             "decision_type": d.decision_type.value if hasattr(d.decision_type, "value") else str(d.decision_type),
             "reason": d.reason,
             "biometric_verified": d.biometric_verified,
-            "review_date": d.review_date
+            "review_date": d.review_date.isoformat() if hasattr(d.review_date, "isoformat") else str(d.review_date)
         })
 
     from routers.orders import enrich_order

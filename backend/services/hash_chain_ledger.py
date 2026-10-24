@@ -1,4 +1,5 @@
 import hashlib
+import threading
 from decimal import Decimal
 from datetime import datetime
 from typing import Optional
@@ -6,6 +7,7 @@ from sqlalchemy.orm import Session
 import models
 
 GENESIS_HASH = "GENESIS_00000000000000000000000000000000000000000000000000000000"
+_ledger_mutex = threading.RLock()
 
 
 def format_created_at(dt: datetime) -> str:
@@ -45,43 +47,49 @@ def add_ledger_entry(
     reversal_of_id: Optional[int] = None,
     allocation_mode: models.AllocationMode = models.AllocationMode.AUTO
 ) -> models.PaymentAllocation:
-    last_entry = db.query(models.PaymentAllocation).order_by(
-        models.PaymentAllocation.id.desc()
-    ).with_for_update().first()
+    """
+    Ghi nhận bút toán vào sổ cái bất biến Hash-Chain Ledger.
+    Sử dụng Mutex và khóa cấp dòng/bảng tuần tự hóa nguyên tử (Atomic Linearization),
+    loại bỏ hoàn toàn rủi ro cạnh tranh đồng thời (Race Condition) gây rẽ nhánh chuỗi băm.
+    """
+    with _ledger_mutex:
+        last_entry = db.query(models.PaymentAllocation).order_by(
+            models.PaymentAllocation.id.desc()
+        ).with_for_update().first()
 
-    prev_hash = last_entry.record_hash if (last_entry and last_entry.record_hash) else GENESIS_HASH
-    now_dt = datetime.utcnow().replace(microsecond=0)
-    amt_dec = Decimal(str(allocated_amount))
-    entry_type_str = entry_type.value if hasattr(entry_type, "value") else str(entry_type)
+        prev_hash = last_entry.record_hash if (last_entry and last_entry.record_hash) else GENESIS_HASH
+        now_dt = datetime.utcnow().replace(microsecond=0)
+        amt_dec = Decimal(str(allocated_amount))
+        entry_type_str = entry_type.value if hasattr(entry_type, "value") else str(entry_type)
 
-    new_alloc = models.PaymentAllocation(
-        bank_transaction_id=bank_transaction_id,
-        payment_request_id=payment_request_id,
-        order_id=order_id,
-        entry_type=entry_type,
-        allocated_amount=amt_dec,
-        reversal_of_id=reversal_of_id,
-        allocation_mode=allocation_mode,
-        created_at=now_dt,
-        prev_hash=prev_hash,
-        record_hash="PENDING"
-    )
+        new_alloc = models.PaymentAllocation(
+            bank_transaction_id=bank_transaction_id,
+            payment_request_id=payment_request_id,
+            order_id=order_id,
+            entry_type=entry_type,
+            allocated_amount=amt_dec,
+            reversal_of_id=reversal_of_id,
+            allocation_mode=allocation_mode,
+            created_at=now_dt,
+            prev_hash=prev_hash,
+            record_hash="PENDING"
+        )
 
-    db.add(new_alloc)
-    db.flush()
+        db.add(new_alloc)
+        db.flush()
 
-    new_alloc.record_hash = compute_record_hash(
-        prev_hash=prev_hash,
-        allocation_id=new_alloc.id,
-        bank_tx_id=bank_transaction_id,
-        payment_req_id=payment_request_id,
-        order_id=order_id,
-        entry_type=entry_type_str,
-        allocated_amount=amt_dec,
-        reversal_of_id=reversal_of_id,
-        created_at=now_dt
-    )
+        new_alloc.record_hash = compute_record_hash(
+            prev_hash=prev_hash,
+            allocation_id=new_alloc.id,
+            bank_tx_id=bank_transaction_id,
+            payment_req_id=payment_request_id,
+            order_id=order_id,
+            entry_type=entry_type_str,
+            allocated_amount=amt_dec,
+            reversal_of_id=reversal_of_id,
+            created_at=now_dt
+        )
 
-    db.commit()
-    db.refresh(new_alloc)
-    return new_alloc
+        db.commit()
+        db.refresh(new_alloc)
+        return new_alloc

@@ -10,6 +10,7 @@ from typing import Optional, List
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 import models
+from services.merkle_tree import generate_shift_merkle_audit
 
 VN_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
 
@@ -57,6 +58,10 @@ def auto_close_expired_shifts(db: Session) -> List[models.Shift]:
         db.commit()
         for s in expired_shifts:
             db.refresh(s)
+            try:
+                generate_shift_merkle_audit(db=db, shift=s, closed_by_user_id=None)
+            except Exception as me:
+                print(f"Warning: Failed to generate Merkle audit for auto-closed shift #{s.id}: {me}")
     except Exception as e:
         db.rollback()
         raise e
@@ -163,6 +168,9 @@ def close_shift_manually(db: Session, shift_id: int, user_info: dict) -> models.
     try:
         db.commit()
         db.refresh(shift)
+        # Sinh chứng chỉ kiểm toán Merkle Tree bất biến chốt ca (Blockchain & RegTech Pillar)
+        closer_id = user_info.get("id") or user_info.get("user_id")
+        generate_shift_merkle_audit(db=db, shift=shift, closed_by_user_id=closer_id)
     except Exception as e:
         db.rollback()
         raise e
