@@ -93,3 +93,4 @@ def alias_shift_finance_summary(shift_id: str, db: Session = Depends(get_db), us
 @app.get("/health", tags=["System"])
 def check_health():
     return {"status": "ok", "message": "VietQR ReconHub API is running smoothly!"}
+
