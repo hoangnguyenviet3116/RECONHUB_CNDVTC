@@ -1,0 +1,202 @@
+# BÁO CÁO RÀ SOÁT, ĐÁNH GIÁ VÀ ĐỀ XUẤT LỘ TRÌNH NÂNG CẤP CÔNG NGHỆ
+## HỆ THỐNG ĐỐI SOÁT GIAO DỊCH TỰ ĐỘNG VIETQR RECONHUB
+
+---
+
+## 1. Tóm tắt hiện trạng và những vấn đề quan trọng nhất
+
+Dự án **VietQR ReconHub** hiện đã xây dựng được một khung kiến trúc MVP tương đối hoàn chỉnh cho quy trình bán hàng quầy thu ngân (POS) tích hợp mã VietQR động, nhận webhook ngân hàng mô phỏng, ghi nhận bút toán phân bổ vào sổ cái có băm chuỗi (hash-chain), và hỗ trợ phê duyệt ngoại lệ có gắn định danh WebAuthn.
+
+Tuy nhiên, khi đối chiếu với yêu cầu của một hệ thống tài chính chuyên sâu và các tuyên bố về công nghệ tiên tiến, dự án đang bộc lộ **4 khoảng trống lớn**:
+
+1. **Bộ máy đối soát (Reconciliation Engine) còn ở mức khớp chuỗi thô sơ:** Thuật toán hiện tại chỉ dùng hàm tách chuỗi cơ bản (`split()`), kiểm tra tiền tố `word.startswith("ORD")`. Dự án hoàn toàn bất lực trước các lỗi gõ sai thường gặp (`ORD 1001`, `ORD1OO1`, `ORD-1001`), không có tính điểm tin cậy (Confidence Score) và không giải quyết được bài toán **chuyển khoản gộp một lần cho nhiều đơn hàng** (1 giao dịch thanh toán cho $N$ đơn).
+2. **Cơ chế xác thực Biometrics chỉ là lớp vỏ mô phỏng (Mock Stub):** Dù frontend gọi `navigator.credentials.get()`, backend tại [webauthn_verifier.py](file:///d:/RECONHUB_CNDVTC/backend/services/webauthn_verifier.py#L89-L94) không hề giải mã cấu trúc CBOR `authenticatorData` và không kiểm tra chữ ký mật mã học (ECDSA P-256) trên public key của người dùng, mà chỉ kiểm tra độ dài chuỗi ký tự thô `len(signature) >= 12`.
+3. **Sổ cái Hash-Chain chưa khép kín vòng đời kiểm toán (RegTech):** Chuỗi băm SHA-256 tuyến tính được lưu trực tiếp trên SQL Server ([payment_allocations](file:///d:/RECONHUB_CNDVTC/database/schema_sqlserver.sql#L65-L85)), nhưng thiếu cấu trúc **Cây Merkle (Merkle Tree)** để chốt số dư theo ca làm việc (Shift Reconciliation Root). Một người quản trị cơ sở dữ liệu có quyền `db_owner` hoàn toàn có thể sửa đổi dữ liệu quá khứ và tính toán lại chuỗi băm xuôi dòng mà không bị phát hiện do thiếu mỏ neo (Anchor) độc lập bên ngoài.
+4. **Kiến trúc truyền thông thời gian thực phụ thuộc HTTP Polling liên tục:** Quầy thu ngân POS ([pos.js](file:///d:/RECONHUB_CNDVTC/frontend/js/pos.js#L348-L362)) đang phát lệnh `GET /orders` đều đặn mỗi **2 giây/lần**. Khi mở rộng nhiều điểm bán (multi-counter), cơ chế này gây lãng phí tài nguyên máy chủ, độ trễ nhận diện tiền vào bị trễ từ 1–2 giây và loa thông báo TTS có nguy cơ phát âm thanh trùng lắp. Đồng thời, API nhận webhook ([webhooks.py](file:///d:/RECONHUB_CNDVTC/backend/routers/webhooks.py#L36-L50)) chưa có cơ chế kiểm tra Timestamp/Tolerance Window để chống tấn công phát lại (Replay Attack).
+
+---
+
+## 2. Bảng tổng hợp vấn đề công nghệ và bằng chứng trong mã nguồn
+
+Dưới đây là bảng đối chiếu chi tiết giữa nhận định công nghệ và hiện trạng mã nguồn thực tế:
+
+| Nhóm vấn đề | Trạng thái hiện tại | Bằng chứng thực tế trong mã nguồn | Đánh giá & Rủi ro kỹ thuật |
+| :--- | :--- | :--- | :--- |
+| **Vấn đề 1: Backend còn thiếu công nghệ chuyên sâu** | **ĐÃ XÁC MINH**<br/>(Đúng hiện trạng) | - [requirements.txt](file:///d:/RECONHUB_CNDVTC/requirements.txt): Chỉ có 7 thư viện cơ bản (`fastapi`, `uvicorn`, `sqlalchemy`, `pyodbc`, `pydantic`, `python-dotenv`, `httpx`).<br/>- Không có thư viện xử lý chuỗi nâng cao (`rapidfuzz`), mật mã học (`cryptography`), xử lý hàng đợi/sự kiện (`sse-starlette`). | Mã nguồn backend mang tính chất CRUD mở rộng. Xử lý nghiệp vụ tài chính phụ thuộc vòng lặp tuần tự, thiếu kiến trúc xử lý tác vụ nền bất đồng bộ và thuật toán tối ưu hóa. |
+| **Vấn đề 2: Thuật toán đối soát còn đơn giản** | **ĐÃ XÁC MINH**<br/>(Rất nghiêm trọng) | - [reconciliation_engine.py](file:///d:/RECONHUB_CNDVTC/backend/services/reconciliation_engine.py#L12-L19):<br/>`for word in content_upper.replace(",", " ").replace(".", " ").split(): if word.startswith("ORD"): ...`<br/>- Gặp đơn đầu tiên là `break`, chỉ xử lý đơn lẻ theo cơ chế tham lam (Greedy). | Không nhận diện được nếu khách gõ `ORD 1001` (dính dấu cách), `ORD1OO1` (gõ chữ O thay số 0), `ORD_1001`.<br/>Hoàn toàn không có khả năng phân bổ giao dịch chuyển gộp cho nhiều đơn hàng. |
+| **Vấn đề 3: Trụ cột Biometrics chưa hiện thực hóa rõ ràng** | **ĐÃ XÁC MINH**<br/>(Lỗ hổng bảo mật) | - [webauthn_verifier.py](file:///d:/RECONHUB_CNDVTC/backend/services/webauthn_verifier.py#L89-L94):<br/>`if len(str(assertion_signature).strip()) < 12: return False`<br/>`return True`<br/>- [webauthn.js](file:///d:/RECONHUB_CNDVTC/frontend/js/webauthn.js#L136-L142): Có chế độ fallback tự sinh mã ngẫu nhiên `cred_...` khi không có phần cứng. | Không thực hiện xác minh mật mã học chữ ký ECDSA P-256 trên Public Key của WebAuthn. Bất kỳ chuỗi ký tự nào dài hơn 12 ký tự đều được backend chấp nhận là "Đã xác thực sinh trắc học".<br/>Chưa có bất kỳ dòng code nào về Computer Vision. |
+| **Vấn đề 4: Trụ cột Blockchain & RegTech chưa khép kín** | **ĐÃ TRIỂN KHAI MỘT PHẦN**<br/>(Thiếu Merkle Tree) | - [hash_chain_ledger.py](file:///d:/RECONHUB_CNDVTC/backend/services/hash_chain_ledger.py#L17-L35): Đã có hàm tính SHA-256 liên kết `prev_hash` tuần tự.<br/>- [dashboard.py](file:///d:/RECONHUB_CNDVTC/backend/routers/dashboard.py#L29-L85): Đã có hàm quét toàn bộ bảng để kiểm tra tính toàn vẹn chuỗi.<br/>- Không tìm thấy bất kỳ cấu trúc `MerkleTree` hoặc `merkle_root` nào trong dự án. | Chuỗi băm SHA-256 hoạt động tốt cho mô hình chuỗi đơn lẻ nội bộ. Tuy nhiên, nếu DBA can thiệp trực tiếp vào DB để sửa số tiền và chạy script tính lại chuỗi băm xuôi dòng thì hệ thống không thể phát hiện vì thiếu Merkle Root chốt sổ độc lập theo ca. |
+| **Vấn đề 5: Trụ cột AI/Big Data - Quản trị rủi ro còn sơ sài** | **CHƯA TRIỂN KHAI**<br/>(Chưa có mã nguồn) | - Quét toàn bộ thư mục `backend/` và `frontend/`: Hoàn toàn **không có** logic phát hiện gian lận, không có bộ tính điểm rủi ro (Risk Scorer), không có Z-Score hay phân tích bất thường. | Dự án đang phụ thuộc 100% vào mắt thường của nhân viên thu ngân và kế toán khi duyệt ngoại lệ tại [reconciliation.html](file:///d:/RECONHUB_CNDVTC/frontend/reconciliation.html). Không có cảnh báo khi khách chuyển thiếu 1 số 0 (ví dụ đơn 5.000.000đ nhưng chỉ chuyển 500.000đ). |
+| **Vấn đề 6: Kiến trúc Thời gian thực & Open Banking chưa rõ ràng** | **ĐÃ XÁC MINH**<br/>(Chưa tối ưu) | - [pos.js](file:///d:/RECONHUB_CNDVTC/frontend/js/pos.js#L348): Polling bằng `setInterval(..., 2000)`.<br/>- [hmac_security.py](file:///d:/RECONHUB_CNDVTC/backend/services/hmac_security.py#L5-L16): Ký HMAC chỉ băm `payload_bytes`, không kèm Timestamp header.<br/>- [vietqr_service.py](file:///d:/RECONHUB_CNDVTC/backend/services/vietqr_service.py#L4-L8): Chỉ nối chuỗi URL ảnh `https://img.vietqr.io/image/...`. | Thiếu Server-Sent Events (SSE). Có nguy cơ bị tấn công phát lại (Replay Attack) nếu kẻ tấn công gửi lại payload cũ. Chưa có kết nối API ngân hàng mở (Open Banking) mà chỉ nhận webhook từ cổng trung gian / ngân hàng mô phỏng. |
+
+---
+
+## 3. Đánh giá chi tiết 5 phương án nâng cấp công nghệ
+
+### Phương án 1 — Chủ đạo: Bộ máy Đối soát Đa tầng & Giải bài toán Chuyển gộp
+*(Multi-Tier Hybrid Reconciliation & Subset-Sum Engine)*
+
+* **Trụ cột công nghệ:** **AI/Big Data - Quản trị rủi ro** kết hợp **Toán tin Tối ưu hóa**
+* **Mục tiêu kỹ thuật:**
+  1. Thay thế hàm `split()` thô sơ bằng quy trình xử lý văn bản 3 tầng:
+     * *Tầng 1 (Tiền xử lý & Chuẩn hóa):* Regex loại bỏ ký tự rác, chuẩn hóa khoảng trắng, sửa lỗi gõ sai ký tự tương đồng ($0 \leftrightarrow O$, $1 \leftrightarrow I \leftrightarrow L$, $8 \leftrightarrow B$, dấu gạch nối `ORD-1001` $\rightarrow$ `ORD1001`).
+     * *Tầng 2 (Đối sánh mờ đa tiêu chí - Multi-Factor Fuzzy Matching):* Sử dụng `RapidFuzz` để tính khoảng cách Levenshtein/Token Sort Ratio giữa nội dung chuyển khoản và mã đơn hàng kết hợp kiểm tra độ lệch thời gian ($\Delta t$) và số tiền ($\Delta m$) để đưa ra **Confidence Score (0.00 – 1.00)**.
+     * *Tầng 3 (Giải bài toán chuyển khoản gộp - Subset-Sum Algorithm):* Khi một giao dịch lớn không khớp trực tiếp với bất kỳ đơn lẻ nào, bóc tách toàn bộ mã đơn tiềm năng có trong nội dung và kích hoạt giải thuật quy hoạch động (Dynamic Programming) hoặc Branch-and-Bound để tìm tập hợp đơn hàng $S \subseteq \{O_1, O_2, \dots, O_n\}$ sao cho $\sum_{i \in S} \text{Amount}(O_i) = \text{TxAmount}$.
+* **Đánh giá phản biện:**
+  * *Độ chính xác & Nguy cơ:* Rất cao đối với chuyển gộp có chỉ định mã đơn. Với trường hợp chuyển gộp không có nội dung rõ ràng, Subset-Sum có thể tìm ra **nhiều nghiệm giả** (ví dụ: đơn 20k + 30k = 50k, nhưng đơn 10k + 40k cũng = 50k).
+  * *Biện pháp kiểm soát:* Nếu Confidence Score $\ge 0.95$ và Subset-Sum ra nghiệm duy nhất $\rightarrow$ Tự động phân bổ. Nếu có từ 2 nghiệm trở lên hoặc Score $< 0.85$ $\rightarrow$ Đưa vào trạng thái `UNDER_REVIEW` để kế toán duyệt ngoại lệ trên giao diện đối soát, tuyệt đối không tự ý phân bổ sai lệch.
+  * *Khả năng triển khai:* **Rất khả thi và cấp thiết nhất**. Tương thích hoàn toàn với cấu trúc cơ sở dữ liệu và bảng [orders](file:///d:/RECONHUB_CNDVTC/database/schema_sqlserver.sql#L45-L60) hiện hữu.
+
+---
+
+### Phương án 2 — Trụ cột Blockchain & RegTech: Chuẩn hóa Sổ cái Chuỗi Băm Bất biến & Cây Merkle Chốt ca
+*(SHA-256 Hash Chain & Merkle Audit)*
+
+* **Trụ cột công nghệ:** **Blockchain & RegTech**
+* **Mục tiêu kỹ thuật:**
+  1. *Khắc phục cạnh tranh đồng thời (Concurrency Lock):* Hiện tại [hash_chain_ledger.py](file:///d:/RECONHUB_CNDVTC/backend/services/hash_chain_ledger.py#L48-L50) dùng `.with_for_update()`. Trên SQL Server cần chuẩn hóa câu lệnh khóa tuần tự cấp bảng hoặc hàng đợi tuần tự (Mutex/Semaphore) để bảo đảm khi 2 webhook vào cùng mili-giây, chuỗi băm không bị đứt gãy hoặc trùng lặp `prev_hash`.
+  2. *Cây Merkle chốt ca (Shift Merkle Tree):* Khi đóng ca (`POST /shifts/{id}/close`), hệ thống thu thập toàn bộ $N$ bản ghi bút toán phát sinh trong ca đó, xây dựng cây Merkle nhị phân và tính toán ra **Merkle Root Hash** duy nhất đại diện cho toàn bộ giá trị tài chính của ca làm việc.
+  3. *Mỏ neo kiểm toán (Independent Audit Anchor):* Merkle Root cùng chữ ký số của người đóng ca được lưu vào bảng `shift_audits`, đồng thời có thể ký số hoặc neo ra ngoài (ví dụ gửi bản tóm tắt qua email quản trị viên hoặc lưu trữ WORM - Write Once Read Many).
+* **Đánh giá phản biện:**
+  * *Giá trị thực tế:* Cực kỳ thuyết phục về mặt RegTech (Công nghệ giám sát tuân thủ). Giải quyết triệt để vấn đề "chuỗi băm nội bộ tự sinh tự kiểm tra". Người kiểm toán độc lập chỉ cần băm ngược từ lá lên Merkle Root để chứng minh 100.000 giao dịch trong ca không bị thêm, bớt hoặc sửa đổi bất kỳ số lẻ nào mà không cần quét lại toàn bộ database từ đầu.
+  * *Khả năng triển khai:* **Khả thi cao**. Tận dụng bảng [shifts](file:///d:/RECONHUB_CNDVTC/database/schema_sqlserver.sql#L33-L43) và [payment_allocations](file:///d:/RECONHUB_CNDVTC/database/schema_sqlserver.sql#L65-L85) hiện tại.
+
+---
+
+### Phương án 3 — Trụ cột Biometrics: Xác thực Sinh trắc học khi Duyệt ngoại lệ & Đảo bút toán
+
+* **Trụ cột công nghệ:** **Biometrics**
+* **So sánh hai hướng tiếp cận:**
+
+| Tiêu chí | Hướng 3A — WebAuthn / FIDO2 Chuẩn quốc tế | Hướng 3B — Computer Vision (Khuôn mặt qua Webcam) |
+| :--- | :--- | :--- |
+| **Bản chất công nghệ** | Chuẩn xác thực mật mã học khóa công khai (W3C/FIDO2). Sử dụng Touch ID/Face ID/Windows Hello tích hợp sẵn trên thiết bị. | Nhận diện khuôn mặt cục bộ qua webcam trình duyệt (Face Embedding + Vector Similarity). |
+| **Mức độ an toàn** | **Tuyệt đối an toàn:** Khóa bí mật không bao giờ rời khỏi chip bảo mật (TPM/Secure Enclave). Miễn nhiễm với Man-in-the-Middle và Replay Attack. | **Rủi ro giả mạo cao:** Rất dễ bị tấn công giả mạo (Spoofing) bằng ảnh chụp, video phát lại nếu không tích hợp mô hình Liveness Detection 3D đắt tiền. |
+| **Độ phức tạp backend** | Vừa phải: Cần cài đặt thư viện chuẩn (`fido2` hoặc `py_webauthn`) để giải mã CBOR và xác minh chữ ký ECDSA P-256 thực sự. | Rất nặng: Cần thư viện nhận diện (`face_recognition`, `opencv`), mô hình tính vector 128 chiều, xử lý độ trễ hình ảnh và ánh sáng quầy POS. |
+| **Tính khả thi với ReconHub** | **100% phù hợp:** Dự án đã có sẵn giao diện gọi WebAuthn ở frontend; chỉ cần sửa backend để xác minh mật mã học thực thụ. | **Kém khả thi:** Cần camera chuyên dụng tại quầy, chi phí tính toán cao, dễ gây ức chế cho nhân viên nếu nhận diện trượt khi quán đông khách. |
+
+* **Đánh giá phản biện & Kết luận:**
+  * **Chọn Hướng 3A (WebAuthn/FIDO2 chuẩn hóa)** làm trọng tâm cốt lõi. Cần nâng cấp backend từ hàm kiểm tra độ dài chuỗi giả lập hiện tại thành bộ xác thực mật mã học thực sự giải mã clientDataJSON và chữ ký ASN.1 DER.
+  * Hướng 3B chỉ nên coi là phương án nghiên cứu bổ trợ trong tương lai, không nên đưa vào lộ trình sản xuất trước mắt do rủi ro sai lệch và giả mạo.
+
+---
+
+### Phương án 4 — Trụ cột AI/Big Data - Quản trị rủi ro: Bộ máy Chấm điểm Rủi ro & Phát hiện Gian lận
+*(Fraud & Anomaly Scorer)*
+
+* **Trụ cột công nghệ:** **AI/Big Data - Quản trị rủi ro**
+* **Mục tiêu kỹ thuật:**
+  * Xây dựng bộ máy Rule-based & Statistical Scoring Engine tính toán điểm rủi ro $R \in [0, 100]$ cho mỗi giao dịch theo 4 nhóm dấu hiệu:
+    1. *Missing-Zero Anomaly (Lệch bậc độ lớn):* Tỷ lệ $\frac{\text{Amount}_{\text{tx}}}{\text{Amount}_{\text{order}}} \in \{0.1, 0.01\}$ (ví dụ: chuyển 50.000đ cho đơn 500.000đ).
+    2. *Rapid QR Churn (Tạo/Hủy đơn dồn dập):* Một tài khoản hoặc một ca tạo hàng loạt mã QR nhưng bị hủy liên tục trong khoảng thời gian ngắn.
+    3. *Outlier Manual Overrides (Bất thường duyệt tay):* Áp dụng thống kê độ lệch chuẩn **Z-Score** để cảnh báo khi tỷ lệ duyệt ghép tay hoặc đảo bút toán của một nhân viên thu ngân vượt quá $3\sigma$ so với mức trung bình của cửa hàng.
+    4. *Velocity Thresholds:* Nhận tiền dồn dập từ cùng một số tài khoản chuyển tiền trong vài chục giây.
+* **Đánh giá phản biện:**
+  * *Tính cần thiết:* Cực kỳ thiết thực cho chủ cửa hàng và kế toán.
+  * *Tránh bẫy "AI hình thức":* Ở giai đoạn này, dữ liệu giao dịch của cửa hàng chưa có hàng triệu bản ghi có gán nhãn gian lận. Do đó, **tuyệt đối không huấn luyện mô hình Deep Learning/Neural Network** vì sẽ gây cảnh báo sai hàng loạt (False Positives). Giải pháp dùng Heuristic Rules kết hợp thống kê Z-Score là khoa học, chính xác, có thể giải thích được (Explainable AI) và chứng minh hiệu quả ngay lập tức.
+
+---
+
+### Phương án 5 — Kiến trúc Thời gian thực & Open Banking: Đẩy sự kiện SSE & Chống Replay Attack
+
+* **Trụ cột công nghệ:** **Kiến trúc Thời gian thực & Open Banking**
+* **Mục tiêu kỹ thuật:**
+  1. *Chuyển dịch sang Server-Sent Events (SSE):*
+     * Thay thế hoàn toàn vòng lặp Polling 2 giây (`setInterval`) tại [pos.js](file:///d:/RECONHUB_CNDVTC/frontend/js/pos.js#L348) bằng kết nối SSE một chiều từ FastAPI (`EventSource` ở trình duyệt).
+     * Khi webhook xử lý và commit xong vào database $\rightarrow$ Đẩy sự kiện `payment_received` ngay lập tức xuống client trong vòng $< 100\text{ ms}$.
+  2. *Hàng đợi âm thanh TTS tuần tự & Chống phát lặp:*
+     * Gắn mã định danh duy nhất của giao dịch vào sự kiện SSE. Trình duyệt chỉ phát loa khi giao dịch chưa từng được phát, loại bỏ hoàn toàn việc phát lại khi tải lại trang web.
+  3. *Bảo vệ Webhook chuẩn ngân hàng (Anti-Replay Attack):*
+     * Yêu cầu header `X-Hub-Timestamp`. Payload ký HMAC sẽ bao gồm: `f"{timestamp}.{raw_body}"`.
+     * Backend từ chối mọi yêu cầu có timestamp lệch quá 300 giây (Tolerance Window) và duy trì bộ nhớ đệm Idempotency Key (Cache/Set) để chặn đứng mọi nỗ lực phát lại giao dịch.
+* **Đánh giá phản biện về Open Banking:**
+  * *Thực tế về Open Banking tại Việt Nam:* Các ngân hàng thương mại (VietinBank, VCB, BIDV) chỉ cấp kết nối Open Banking trực tiếp cho các doanh nghiệp có giấy phép trung gian thanh toán hoặc tài khoản doanh nghiệp ký quỹ lớn.
+  * *Định vị đúng:* ReconHub đóng vai trò là **Hệ thống Quản lý Đối soát Điểm cuối (Merchant Reconciliation Hub)**, tiếp nhận dữ liệu thông qua Open Banking Gateway (Webhook HMAC chuẩn EMVCo/Napas). Việc tuyên bố "kết nối trực tiếp Open Banking" cần được làm rõ là chuẩn hóa giao thức Webhook mở theo tiêu chuẩn Open Banking, thay vì ngộ nhận rằng ứng dụng tự gọi thẳng vào core ngân hàng.
+
+---
+
+## 4. Bảng so sánh, chấm điểm và xếp hạng ưu tiên
+
+Thang điểm từ **1 (Rất thấp)** đến **5 (Rất cao)** được đánh giá dựa trên mức độ cấp thiết, giá trị nghiệp vụ, chiều sâu công nghệ và tính khả thi trong việc kiểm chứng:
+
+| Phương án nâng cấp | Nghiêm trọng | Giá trị nghiệp vụ | Chiều sâu công nghệ | Tính mới & Khác biệt | Khả thi | Phức tạp & Rủi ro | Tổng điểm | Xếp hạng ưu tiên |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Phương án 1 — Chủ đạo: Bộ máy Đối soát Đa tầng & Giải bài toán Chuyển gộp** | 5 | 5 | 5 | 5 | 5 | 3 | **28/30** | **P0 (Cốt lõi bắt buộc)** |
+| **Phương án 5 — Kiến trúc Thời gian thực & Open Banking: Đẩy sự kiện SSE & Chống Replay** | 5 | 5 | 4 | 4 | 5 | 2 | **25/30** | **P0 (Hạ tầng bắt buộc)** |
+| **Phương án 2 — Trụ cột Blockchain & RegTech: Sổ cái Chuỗi Băm & Cây Merkle Chốt ca** | 4 | 4 | 5 | 5 | 4 | 3 | **25/30** | **P1 (Tạo khác biệt RegTech)** |
+| **Phương án 4 — Trụ cột AI/Big Data: Chấm điểm Rủi ro & Phát hiện Gian lận** | 4 | 4 | 4 | 4 | 4 | 3 | **23/30** | **P1 (Quản trị rủi ro)** |
+| **Phương án 3A — Trụ cột Biometrics: Chuẩn hóa WebAuthn/FIDO2 Mật mã học** | 4 | 4 | 4 | 3 | 5 | 2 | **22/30** | **P1 (Bảo mật ngoại lệ)** |
+| *Phương án 3B — Trụ cột Biometrics: Computer Vision nhận diện khuôn mặt* | 1 | 2 | 4 | 3 | 2 | 5 | **17/30** | **Chưa nên triển khai** |
+
+### Trả lời 6 câu hỏi chiến lược:
+1. **Vấn đề thực sự nghiêm trọng cần xử lý trước:** Thuật toán đối soát quá thô sơ (Vấn đề 2), cơ chế Polling 2s gây nghẽn (Vấn đề 6) và bảo mật WebAuthn bị giả lập lỏng lẻo (Vấn đề 3).
+2. **Phương án tạo khác biệt lớn nhất cho VietQR ReconHub:** **Phương án 1 (Đối soát đa tầng & Subset-Sum)** giải quyết triệt để bài toán chuyển gộp mà các phần mềm POS trên thị trường hiện nay bó tay; kết hợp với **Phương án 2 (Cây Merkle chốt ca)** biến hệ thống thành một nền tảng RegTech có thể kiểm toán minh bạch số quỹ.
+3. **Phương án là nền tảng bắt buộc:** **Phương án 5 (SSE & Chống Replay)** và **Phương án 1 (Multi-Tier Engine)**. Không thể phát hiện gian lận hay xây dựng Merkle Tree nếu dữ liệu đối soát đầu vào vẫn bị lặp hoặc bị khớp trượt.
+4. **Phương án triển khai nhanh, giá trị trình diễn rõ ràng:** **Phương án 5 (SSE + Loa TTS tức thì)** và **Phương án 3A (WebAuthn chữ ký thật)**.
+5. **Phương án quá phức tạp, thiếu dữ liệu hoặc chưa cần thiết:** **Phương án 3B (Computer Vision)** và việc áp dụng các mạng nơ-ron học sâu (Deep Learning) ở Phương án 4.
+6. **Lựa chọn trọng tâm:** **Khuyến nghị kết hợp triển khai 4 phương án cốt lõi (1, 2, 3A, 4, 5)** theo lộ trình 3 giai đoạn chặt chẽ; loại bỏ Hướng 3B (Computer Vision) để tập trung nguồn lực.
+
+---
+
+## 5. Lộ trình triển khai nâng cấp công nghệ theo thứ tự trước – sau
+
+```mermaid
+flowchart TD
+    subgraph GIAI_DOAN_1["GIAI ĐOẠN 1: NỀN TẢNG THỜI GIAN THỰC & ĐỐI SOÁT ĐA TẦNG (P0)"]
+        P5["Phương án 5: SSE Real-Time & Chống Replay Webhook"]
+        P1["Phương án 1: Bộ máy Đối soát Đa tầng (Regex + RapidFuzz + Subset-Sum)"]
+    end
+
+    subgraph GIAI_DOAN_2["GIAI ĐOẠN 2: CHUẨN HÓA BẢO MẬT & KIỂM TOÁN CHỐT SỔ (P1)"]
+        P3A["Phương án 3A: Hoàn thiện Mật mã học WebAuthn/FIDO2"]
+        P2["Phương án 2: Chuẩn hóa Sổ cái Chuỗi Băm & Cây Merkle Chốt ca"]
+    end
+
+    subgraph GIAI_DOAN_3["GIAI ĐOẠN 3: BỘ MÁY CHẤM ĐIỂM RỦI RO & PHÁT HIỆN GIAN LẬN (P1)"]
+        P4["Phương án 4: Anomaly Scorer (Missing-Zero, Z-Score Outlier, Churn Detection)"]
+    end
+
+    GIAI_DOAN_1 --> GIAI_DOAN_2
+    GIAI_DOAN_2 --> GIAI_DOAN_3
+```
+
+---
+
+## 6. Phương án tối ưu được khuyến nghị
+
+### A. Những việc NÊN LÀM NGAY (Giai đoạn 1 & 2):
+1. **Nâng cấp Bộ máy Đối soát Đa tầng (Phương án 1):**
+   * Tích hợp `rapidfuzz` để chuẩn hóa lỗi ký tự và tính điểm tin cậy Confidence Score.
+   * Cài đặt giải thuật Subset-Sum có kiểm soát (DP/Branch-and-Bound) để tự động ghép các giao dịch chuyển khoản gộp cho nhiều hóa đơn.
+2. **Thay thế Polling bằng Server-Sent Events (Phương án 5):**
+   * Xây dựng Endpoint SSE `GET /events/stream` tại FastAPI bằng `StreamingResponse` và hàng đợi bất đồng bộ `asyncio.Queue`.
+   * Bổ sung cơ chế xác thực HMAC kèm Timestamp và TTL Cache để triệt tiêu nguy cơ Replay Attack.
+3. **Hiện thực hóa Mật mã học WebAuthn (Phương án 3A):**
+   * Sử dụng thư viện mật mã chuẩn để xác minh chữ ký ECDSA P-256 thực sự khi nhân viên thực hiện thao tác duyệt ngoại lệ hoặc đảo bút toán.
+4. **Cây Merkle cho Sổ cái Chốt ca (Phương án 2):**
+   * Xây dựng module Merkle Tree tính toán Merkle Root khi đóng ca làm việc, tích hợp màn hình đối soát độc lập trên giao diện Dashboard/Reconciliation.
+
+### B. Những việc ĐỂ SAU (Giai đoạn 3):
+1. **Bộ máy chấm điểm rủi ro & Anomaly Scorer (Phương án 4):**
+   * Triển khai bộ quy tắc phát hiện giao dịch thiếu số 0 và cảnh báo thống kê Z-Score sau khi hệ thống đã có luồng dữ liệu đối soát ổn định từ Giai đoạn 1 và 2.
+
+### C. Những việc KHÔNG NÊN LÀM:
+1. **Không triển khai Nhận diện khuôn mặt Computer Vision (Phương án 3B):**
+   * Tốn kém tài nguyên, dễ bị đánh lừa bằng hình ảnh/màn hình điện thoại và không mang lại giá trị pháp lý vững chắc bằng chuẩn chữ ký số phần cứng WebAuthn/FIDO2.
+2. **Không áp dụng Machine Learning "hộp đen" khi chưa có tập dữ liệu gán nhãn:**
+   * Tránh đưa các mô hình AI phức tạp vào phần chấm điểm rủi ro để tránh tình trạng báo động giả (False Alarms) gây gián đoạn quy trình thanh toán tại quầy thu ngân.
+
+---
+
+## 7. Danh sách các quyết định cần người dùng phê duyệt
+
+Để chuẩn bị cho giai đoạn triển khai kỹ thuật tiếp theo, kính đề nghị bạn xem xét và phê duyệt các định hướng chiến lược sau:
+
+* [ ] **Quyết định 1 (Phạm vi đối soát):** Phê duyệt triển khai **Phương án 1** với giải thuật Subset-Sum; trong đó quy định: nếu phát hiện nhiều nghiệm chuyển gộp trùng khớp, hệ thống bắt buộc chuyển sang chế độ `UNDER_REVIEW` để con người duyệt, không tự ý ghép ngẫu nhiên.
+* [ ] **Quyết định 2 (Kiến trúc truyền thông):** Phê duyệt thay thế toàn bộ cơ chế Polling 2s tại quầy POS bằng **Server-Sent Events (SSE)** theo **Phương án 5**, kèm cơ chế chống Replay Attack cho Webhook.
+* [ ] **Quyết định 3 (Định hướng Sinh trắc học):** Phê duyệt lựa chọn **Hướng 3A (Chuẩn hóa WebAuthn/FIDO2 mật mã học)** và chính thức loại bỏ Hướng 3B (Computer Vision) khỏi lộ trình phát triển.
+* [ ] **Quyết định 4 (Mô hình Sổ cái & Kiểm toán):** Phê duyệt bổ sung **Cây Merkle chốt ca (Phương án 2)** để nâng cao tính pháp lý và năng lực kiểm toán RegTech cho hệ thống.
+* [ ] **Quyết định 5 (Thứ tự thực hiện):** Phê duyệt triển khai theo 3 giai đoạn: **Giai đoạn 1 (Phương án 1 + 5)** $\rightarrow$ **Giai đoạn 2 (Phương án 2 + 3A)** $\rightarrow$ **Giai đoạn 3 (Phương án 4)**.
+
+---
+*(Báo cáo đã hoàn thành toàn diện theo đúng yêu cầu phân tích, giữ nguyên đầy đủ tên gọi và 4 trụ cột công nghệ; không có bất kỳ dòng mã nguồn nào bị thay đổi trong phiên làm việc này. Hệ thống đang sẵn sàng chờ bạn phản hồi và phê duyệt).*

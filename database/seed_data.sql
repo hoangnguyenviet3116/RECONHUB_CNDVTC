@@ -1,3 +1,10 @@
+-- =============================================================================
+-- [CẢNH BÁO AN TOÀN - DEVELOPMENT / TEST ONLY]
+-- FILE NÀY CHỈ DÙNG CHO MÔI TRƯỜNG THỬ NGHIỆM VÀ PHÁT TRIỂN (DEV / TEST).
+-- NGHIÊM CẤM TỰ ĐỘNG CHẠY HOẶC NẠP FILE NÀY TRONG MÔI TRƯỜNG PRODUCTION.
+-- HỆ THỐNG VẬN HÀNH THẬT CHỈ LẤY VÀ HIỂN THỊ DỮ LIỆU PHÁT SINH TỪ WEB.
+-- =============================================================================
+
 -- [P1-06] Script nạp dữ liệu mẫu chuẩn: 100tr đơn hợp lệ / 90tr QR / 75tr đã phân bổ / 5tr tiền treo
 -- KỊCH BẢN SỐ LIỆU CHUẨN TRONG CA 1:
 --   • Mục tiêu doanh thu tham khảo (target_revenue) : 120.000.000 VNĐ
@@ -44,14 +51,14 @@ INSERT INTO dbo.merchants (merchant_code, name, bank_bin, account_no, webhook_se
 
 -- 4. NẠP BẢNG merchant_users (Phân quyền nhân sự thuộc cửa hàng: CASHIER, REVIEWER, OWNER)
 INSERT INTO dbo.merchant_users (user_id, merchant_id, role, is_active) VALUES
-    (0, 0, 'CASHIER', 1),
-    (1, 0, 'REVIEWER', 1),
-    (2, 0, 'OWNER', 1);
+    (1, 1, 'CASHIER', 1),
+    (2, 1, 'REVIEWER', 1),
+    (3, 1, 'OWNER', 1);
 
 -- 5. NẠP BẢNG shifts (Ca 1 đang OPEN có target_revenue = 120.000.000 VNĐ chỉ làm chỉ tiêu tham khảo)
 INSERT INTO dbo.shifts (merchant_id, name, target_revenue, start_time, end_time, status) VALUES
-(0, N'Ca Kinh Doanh Chính - Ngày 24/10/2026', 120000000.00, '2026-10-24 08:00:00', '2026-10-24 22:00:00', 'OPEN'),
-(0, N'Ca Dự Phòng Ngày Mai - 25/10/2026', 80000000.00, '2026-10-25 08:00:00', '2026-10-25 22:00:00', 'DRAFT');
+(1, N'Ca Kinh Doanh Chính - Ngày 24/10/2026', 120000000.00, '2026-10-24 08:00:00', '2026-10-24 22:00:00', 'OPEN'),
+(1, N'Ca Dự Phòng Ngày Mai - 25/10/2026', 80000000.00, '2026-10-25 08:00:00', '2026-10-25 22:00:00', 'DRAFT');
 
 -- 6. NẠP BẢNG orders
 -- 5 Đơn hợp lệ (CONFIRMED_ORDER) có tổng = 40tr + 25tr + 15tr + 10tr + 10tr = 100.000.000 VNĐ
@@ -77,10 +84,10 @@ INSERT INTO dbo.payment_requests (order_id, request_code, expected_amount, qr_ur
 -- 8. NẠP BẢNG bank_transactions
 -- Tổng tiền ngân hàng đã ghi nhận = 80.000.000 VNĐ (Gồm 75.000.000 VNĐ đã phân bổ + 5.000.000 VNĐ tiền treo UNMATCHED)
 INSERT INTO dbo.bank_transactions (merchant_id, reference_code, amount, allocated_amount, unallocated_amount, transfer_content, sender_account, match_status, created_at) VALUES
-(0, 'FT262910001', 40000000.00, 40000000.00,       0.00, N'TT ORD1001', '0123456789', 'FULLY_ALLOCATED', '2026-10-21 09:00:00'),
-(0, 'FT262910002', 25000000.00, 25000000.00,       0.00, N'TT ORD1002', '0987654321', 'FULLY_ALLOCATED', '2026-10-21 09:15:00'),
-(0, 'FT262910003', 10000000.00, 10000000.00,       0.00, N'TT ORD1003', '0911222333', 'FULLY_ALLOCATED', '2026-10-21 09:30:00'),
-(0, 'FT262910004',  5000000.00,        0.00, 5000000.00, N'TT ORD9999 KHACH GHI SAI MA DON', '0944555666', 'UNMATCHED', '2026-10-21 09:45:00');
+(1, 'FT262910001', 40000000.00, 40000000.00,       0.00, N'TT ORD1001', '0123456789', 'FULLY_ALLOCATED', '2026-10-21 09:00:00'),
+(1, 'FT262910002', 25000000.00, 25000000.00,       0.00, N'TT ORD1002', '0987654321', 'FULLY_ALLOCATED', '2026-10-21 09:15:00'),
+(1, 'FT262910003', 10000000.00, 10000000.00,       0.00, N'TT ORD1003', '0911222333', 'FULLY_ALLOCATED', '2026-10-21 09:30:00'),
+(1, 'FT262910004',  5000000.00,        0.00, 5000000.00, N'TT ORD9999 KHACH GHI SAI MA DON', '0944555666', 'UNMATCHED', '2026-10-21 09:45:00');
 
 -- 9. NẠP BẢNG payment_allocations (Sổ cái Append-Only với chuỗi băm SHA-256 nối tiếp chuẩn xác)
 -- Công thức băm chuẩn: SHA256(prev_hash | id | bank_transaction_id | payment_request_id | order_id | entry_type | allocated_amount | reversal_of_id | created_at)

@@ -56,6 +56,14 @@
                                 <span>Mục tiêu ca:</span>
                                 <strong class="text-dark font-numeric" id="kpi-target-revenue">120.000.000 ₫</strong>
                             </div>
+                            <div class="d-flex justify-content-between small text-secondary pt-1" style="font-size: 0.76rem;">
+                                <span>Đơn hợp lệ:</span>
+                                <strong class="text-dark font-numeric" id="dash-valid-order-count">0 đơn</strong>
+                            </div>
+                            <div class="d-flex justify-content-between small text-danger pt-1" style="font-size: 0.76rem;" id="dash-cancelled-order-row">
+                                <span>Đơn đã hủy:</span>
+                                <span class="font-numeric" id="dash-cancelled-order-total">0 ₫ (0 đơn)</span>
+                            </div>
                         </div>
                     </div>
 
@@ -140,6 +148,11 @@
                                 Bảng Cân Đối Dòng Tiền Chi Tiết
                             </button>
                         </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-semibold small py-2 px-3" data-bs-toggle="pill" data-bs-target="#pane-orders-detail" type="button" role="tab">
+                                Danh Sách Hóa Đơn Đối Soát
+                            </button>
+                        </li>
                     </ul>
 
                     <div class="d-flex flex-wrap gap-2">
@@ -192,6 +205,33 @@
                                     </tr>
                                 </thead>
                                 <tbody id="dash-reconciliation-formula-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tab 3: Danh sách hóa đơn đối soát -->
+                    <div class="tab-pane fade" id="pane-orders-detail" role="tabpanel">
+                        <div class="table-responsive">
+                            <table class="fp-table">
+                                <thead>
+                                    <tr>
+                                        <th>Mã hóa đơn</th>
+                                        <th>Ca bán hàng</th>
+                                        <th class="text-end">Tổng tiền</th>
+                                        <th class="text-end">Đã thu</th>
+                                        <th class="text-end">Còn thiếu</th>
+                                        <th>Trạng thái đơn</th>
+                                        <th>Trạng thái thanh toán</th>
+                                        <th>Hạch toán sổ quỹ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dash-orders-table-tbody">
+                                    <tr>
+                                        <td colspan="8" class="text-center py-4 text-secondary">
+                                            Đang tải danh sách hóa đơn đối soát...
+                                        </td>
+                                    </tr>
+                                </tbody>
                             </table>
                         </div>
                     </div>

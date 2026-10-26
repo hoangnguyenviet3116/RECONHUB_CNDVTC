@@ -143,7 +143,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .step-pills-row {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 0.5rem;
 }
 
@@ -256,6 +256,29 @@ h1, h2, h3, h4, h5, h6 {
 
 .btn-fp-success:hover {
     background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.btn-fp-danger {
+    background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+    color: #ffffff;
+    border: 1px solid #be123c;
+    border-radius: var(--fp-radius-sm);
+    padding: 0.6rem 1.25rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    box-shadow: 0 4px 12px rgba(225, 29, 72, 0.2);
+    transition: all 0.2s ease;
+}
+
+.btn-fp-danger:hover {
+    background: linear-gradient(135deg, #be123c 0%, #9f1239 100%);
     color: #ffffff;
     transform: translateY(-1px);
 }
