@@ -68,6 +68,7 @@ CREATE TABLE dbo.shifts (
     start_time DATETIME2 NOT NULL,
     end_time DATETIME2 NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'OPEN',
+    closed_at DATETIME2 NULL,
     CONSTRAINT CK_shifts_target_revenue CHECK (target_revenue > 0),
     CONSTRAINT CK_shifts_time_valid CHECK (end_time > start_time),
     CONSTRAINT CK_shifts_status CHECK (status IN ('DRAFT', 'OPEN', 'CLOSED', 'CANCELLED')),
@@ -183,10 +184,30 @@ CREATE TABLE dbo.decisions (
     assertion_signature NVARCHAR(MAX) NULL,
     biometric_verified BIT NOT NULL DEFAULT 0,
     review_date DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
-    CONSTRAINT CK_decisions_type CHECK (decision_type IN ('APPROVE_MANUAL_MATCH', 'REVERSE_ALLOCATION', 'REQUEST_INFO', 'REJECT_TX')),
+    CONSTRAINT CK_decisions_type CHECK (decision_type IN ('APPROVE_MANUAL_MATCH', 'REVERSE_ALLOCATION', 'REQUEST_INFO', 'REJECT_TX', 'OVERPAYMENT_RESOLUTION')),
     CONSTRAINT CK_decisions_reason_not_empty CHECK (LEN(TRIM(reason)) > 0),
     CONSTRAINT FK_decisions_orders FOREIGN KEY (order_id) REFERENCES dbo.orders(id),
     CONSTRAINT FK_decisions_bank_tx FOREIGN KEY (bank_transaction_id) REFERENCES dbo.bank_transactions(id),
     CONSTRAINT FK_decisions_users FOREIGN KEY (reviewer_id) REFERENCES dbo.users(id)
+);
+GO
+-- BẢNG 10: shift_audits (Lưu chứng chỉ kiểm toán Merkle Tree bất biến khi chốt ca - RegTech Pillar)
+CREATE TABLE dbo.shift_audits (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    shift_id INT NOT NULL,
+    merchant_id INT NOT NULL,
+    closed_by INT NULL,
+    total_orders INT NOT NULL DEFAULT 0,
+    total_revenue DECIMAL(18,2) NOT NULL DEFAULT 0,
+    total_allocations INT NOT NULL DEFAULT 0,
+    merkle_root VARCHAR(64) NOT NULL,
+    first_record_hash VARCHAR(64) NULL,
+    last_record_hash VARCHAR(64) NULL,
+    audit_signature NVARCHAR(500) NULL,
+    created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+    CONSTRAINT UQ_shift_audits_shift UNIQUE (shift_id),
+    CONSTRAINT FK_shift_audits_shifts FOREIGN KEY (shift_id) REFERENCES dbo.shifts(id),
+    CONSTRAINT FK_shift_audits_merchants FOREIGN KEY (merchant_id) REFERENCES dbo.merchants(id),
+    CONSTRAINT FK_shift_audits_users FOREIGN KEY (closed_by) REFERENCES dbo.users(id)
 );
 GO

@@ -11,7 +11,8 @@ let isSubmittingDecision = false;
 const DECISION_TYPE_LABELS = {
     APPROVE_MANUAL_MATCH: "Ghép tiền vào hóa đơn",
     REVERSE_ALLOCATION: "Đảo bút toán đã ghép",
-    REJECT_TX: "Từ chối giao dịch"
+    REJECT_TX: "Từ chối giao dịch",
+    OVERPAYMENT_RESOLUTION: "Ghi nhận xử lý tiền thừa"
 };
 
 function initReconciliationPage() {
@@ -28,6 +29,7 @@ function bindReconciliationEvents() {
 
     document.getElementById("match-order-select")?.addEventListener("change", updateSuggestedMatchAmount);
     document.getElementById("form-manual-match")?.addEventListener("submit", handleManualMatchSubmit);
+    document.getElementById("form-overpayment")?.addEventListener("submit", handleOverpaymentSubmit);
     document.getElementById("form-reverse-alloc")?.addEventListener("submit", handleReverseAllocSubmit);
 }
 
@@ -81,38 +83,45 @@ async function loadReconciliationWorkspace(showNotification = false) {
     }
 }
 
-// 1. Bảng các khoản tiền chờ ghép đơn
+// 1. Bảng các khoản tiền chờ xử lý
 function renderUnmatchedTable() {
     const tbody = document.getElementById("recon-unmatched-tbody");
     const countBadge = document.getElementById("badge-unmatched-count");
     if (!tbody) return;
 
-    const exceptionTxs = (reconBankTxs || []).filter(
-        (tx) =>
-            Number(tx.unallocated_amount || 0) > 0 ||
-            String(tx.match_status || "").toUpperCase() === "UNMATCHED"
-    );
+    // Các khoản đã được xử lý sẽ không hiện ở tab chờ xử lý nữa
+    const pendingTxs = (reconBankTxs || []).filter((tx) => {
+        const isHandled = Boolean(
+            tx.is_handled ||
+            (reconDecisions && reconDecisions.some((d) => Number(d.bank_transaction_id) === Number(tx.id)))
+        );
+        if (isHandled) return false;
+        return Number(tx.unallocated_amount || 0) > 0 || String(tx.match_status || "").toUpperCase() === "UNMATCHED";
+    });
 
     if (countBadge) {
-        countBadge.textContent = String(exceptionTxs.length);
-    }
+    const count = pendingTxs.length;
+    countBadge.textContent = String(count);
+    countBadge.classList.toggle("d-none", count === 0);
+}
 
-    if (exceptionTxs.length === 0) {
+    if (pendingTxs.length === 0) {
         tbody.innerHTML = `
             <tr>
                 <td colspan="6" class="text-center py-5 text-success fw-medium">
-                    ✓ Tất cả các khoản chuyển khoản đã được khớp vào hóa đơn (Không có khoản tiền lệch).
+                    ✓ Tất cả các khoản chuyển khoản đã được xử lý hoàn tất (Không còn khoản tiền chờ xử lý).
                 </td>
             </tr>
         `;
         return;
     }
 
-    tbody.innerHTML = exceptionTxs
+    tbody.innerHTML = pendingTxs
         .map((tx) => {
             const unalloc = Number(tx.unallocated_amount || 0);
+
             return `
-                <tr>
+                <tr id="row-recon-tx-${tx.id}">
                     <td>
                         <div class="fw-bold text-dark font-numeric">${escapeReconHtml(tx.reference_code)}</div>
                         <div class="text-secondary" style="font-size: 0.72rem;">${formatDateTime(tx.created_at)}</div>
@@ -129,9 +138,9 @@ function renderUnmatchedTable() {
                     <td>
                         ${renderStatusBadge(tx.match_status || "UNMATCHED")}
                     </td>
-                    <td class="text-end">
-                        <button type="button" class="btn-fp-dark py-1 px-3" style="font-size: 0.8rem;" onclick="openManualMatchModal(${tx.id})">
-                            Ghép vào hóa đơn
+                    <td class="text-end" id="action-cell-tx-${tx.id}">
+                        <button type="button" class="btn-fp-dark py-1 px-3" id="btn-handle-tx-${tx.id}" style="font-size: 0.8rem;" onclick="handleTransactionAction(${tx.id})">
+                            Xử lý
                         </button>
                     </td>
                 </tr>
@@ -215,17 +224,49 @@ function renderDecisionsHistory() {
 
     listEl.innerHTML = reconDecisions
         .map((d) => {
-            const label = DECISION_TYPE_LABELS[d.decision_type] || d.decision_type;
+            const typeLabel = DECISION_TYPE_LABELS[d.decision_type] || d.decision_type;
+            const isOvp = d.decision_type === "OVERPAYMENT_RESOLUTION";
+            const badgeClass = isOvp ? "fp-badge-warning" : d.decision_type === "REVERSE_ALLOCATION" ? "fp-badge-danger" : "fp-badge-dark";
+            
+            const txCode = d.reference_code || (d.bank_transaction_id ? `GD #${d.bank_transaction_id}` : "—");
+            const ordCode = d.order_code ? `Hóa đơn ${d.order_code}` : (d.order_id ? `Hóa đơn #${d.order_id}` : "Không có");
+            const reviewerName = d.reviewer_name || `Nhân viên #${d.reviewer_id || 1}`;
+
+            let amountInfo = "";
+            if (d.tx_amount != null) {
+                amountInfo += `<span class="me-2">Số tiền GD: <strong>${formatVND(d.tx_amount)}</strong></span>`;
+            }
+            if (d.allocated_amount != null && d.allocated_amount > 0) {
+                amountInfo += `<span class="text-success me-2">Đã phân bổ: <strong>${formatVND(d.allocated_amount)}</strong></span>`;
+            }
+            if (d.unallocated_amount != null && d.unallocated_amount > 0) {
+                amountInfo += `<span class="text-danger me-2">Tiền thừa: <strong>${formatVND(d.unallocated_amount)}</strong></span>`;
+            }
+
+            const verifiedBadge = d.biometric_verified
+                ? `<span class="fp-badge fp-badge-success mb-1">✓ Đã xác thực bảo mật WebAuthn</span>`
+                : `<span class="fp-badge fp-badge-neutral mb-1">Chưa qua khóa bảo mật</span>`;
+
             return `
-                <div class="p-3 rounded-3 bg-light border small d-flex flex-wrap align-items-center justify-content-between gap-2">
-                    <div>
-                        <div class="fw-bold text-dark mb-1">
-                            ${escapeReconHtml(label)} • Giao dịch ${escapeReconHtml(d.reference_code || `#${d.bank_transaction_id}`)} → Hóa đơn ${escapeReconHtml(d.order_code || `#${d.order_id}`)}
+                <div class="p-3 rounded-3 bg-light border small d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <div style="max-width: 70%;">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="fp-badge ${badgeClass}">${escapeReconHtml(typeLabel)}</span>
+                            <strong class="text-dark font-numeric">${escapeReconHtml(txCode)}</strong>
+                            <span class="text-secondary">→</span>
+                            <strong class="text-primary">${escapeReconHtml(ordCode)}</strong>
                         </div>
-                        <div class="text-secondary">Lý do: “${escapeReconHtml(d.reason)}”</div>
+                        ${amountInfo ? `<div class="mb-1 text-secondary" style="font-size: 0.78rem;">${amountInfo}</div>` : ""}
+                        <div class="text-dark fw-medium">
+                            ${isOvp ? "Phương thức xử lý:" : "Lý do:"}
+                            <span class="fw-normal text-secondary">“${escapeReconHtml(d.reason)}”</span>
+                        </div>
+                        <div class="text-secondary mt-1" style="font-size: 0.72rem;">
+                            Thực hiện bởi: <strong>${escapeReconHtml(reviewerName)}</strong>
+                        </div>
                     </div>
                     <div class="text-end">
-                        <span class="fp-badge fp-badge-success mb-1">✓ Đã xác thực bảo mật</span>
+                        ${verifiedBadge}
                         <div class="text-secondary" style="font-size: 0.72rem;">${formatDateTime(d.review_date || d.created_at)}</div>
                     </div>
                 </div>
@@ -234,7 +275,171 @@ function renderDecisionsHistory() {
         .join("");
 }
 
-// 4. Mở hộp thoại Ghép tiền vào hóa đơn
+// 4. Xác định loại giao dịch và điều hướng mở hộp thoại tương ứng
+function handleTransactionAction(txId) {
+    const tx = reconBankTxs.find((t) => Number(t.id) === Number(txId));
+    if (!tx) return;
+
+    // Giao dịch chuyển thừa tiền: Đã có phân bổ > 0 và số tiền còn thừa > 0, hoặc có gắn với hóa đơn
+    const isOverpayment = Boolean(
+        tx.is_overpayment ||
+        (Number(tx.allocated_amount || 0) > 0 && Number(tx.unallocated_amount || 0) > 0)
+    );
+
+    if (isOverpayment) {
+        openOverpaymentModal(txId);
+    } else {
+        openManualMatchModal(txId);
+    }
+}
+
+// 4.1 Mở hộp thoại Phương thức xử lý (giao dịch chuyển thừa)
+function openOverpaymentModal(txId) {
+    const tx = reconBankTxs.find((t) => Number(t.id) === Number(txId));
+    if (!tx) return;
+
+    document.getElementById("ovp-tx-id").value = String(tx.id);
+    document.getElementById("ovp-order-id").value = String(tx.order_id || "");
+
+    document.getElementById("ovp-tx-code").textContent = tx.reference_code || "—";
+    document.getElementById("ovp-order-code").textContent = tx.order_code ? `Hóa đơn ${tx.order_code}` : (tx.order_id ? `Hóa đơn #${tx.order_id}` : "Hóa đơn liên quan");
+    document.getElementById("ovp-tx-amount").textContent = formatVND(tx.amount);
+    document.getElementById("ovp-order-amount").textContent = formatVND(tx.order_amount || tx.allocated_amount || 0);
+    document.getElementById("ovp-unallocated-amount").textContent = formatVND(tx.unallocated_amount);
+
+    const methodInput = document.getElementById("ovp-method-input");
+    if (methodInput) methodInput.value = "";
+    document.getElementById("ovp-error-box")?.classList.add("d-none");
+
+    const modalEl = document.getElementById("overpaymentModal");
+    if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+}
+
+// 4.2 Xử lý xác nhận Phương thức xử lý khoản tiền thừa
+async function handleOverpaymentSubmit(event) {
+    event.preventDefault();
+    if (isSubmittingDecision) return;
+
+    const txId = Number(document.getElementById("ovp-tx-id")?.value || 0);
+    const orderId = Number(document.getElementById("ovp-order-id")?.value || 0) || null;
+    const methodPlan = (document.getElementById("ovp-method-input")?.value || "").trim();
+    const securityMode = document.getElementById("ovp-security-mode")?.value || "WEBAUTHN_SIGN";
+    const errorBox = document.getElementById("ovp-error-box");
+    const confirmBtn = document.getElementById("btn-confirm-ovp");
+
+    if (errorBox) errorBox.classList.add("d-none");
+
+    if (!methodPlan) {
+        if (errorBox) {
+            errorBox.textContent = "Vui lòng nhập phương thức xử lý khoản tiền thừa (không được để trống).";
+            errorBox.classList.remove("d-none");
+        }
+        return;
+    }
+
+    isSubmittingDecision = true;
+    const oldBtnText = confirmBtn ? confirmBtn.innerHTML : "";
+    if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Đang lưu...`;
+    }
+
+    try {
+        let webauthnProof = {
+            credential_id: null,
+            challenge_used: null,
+            assertion_signature: null
+        };
+
+        if (securityMode === "WEBAUTHN_SIGN") {
+            try {
+                webauthnProof = await requestWebAuthnAssertion({
+                    decision_type: "OVERPAYMENT_RESOLUTION",
+                    bank_transaction_id: txId,
+                    order_id: orderId
+                });
+            } catch (err) {
+                // Nếu người dùng hủy hoặc lỗi sinh trắc học
+                if (errorBox) {
+                    errorBox.textContent = err.message || "Xác thực bảo mật WebAuthn thất bại.";
+                    errorBox.classList.remove("d-none");
+                }
+                isSubmittingDecision = false;
+                if (confirmBtn) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = oldBtnText;
+                }
+                return;
+            }
+        }
+
+        const resp = await apiRequest("/decisions", {
+            method: "POST",
+            body: JSON.stringify({
+                reviewer_id: getCurrentUserId(),
+                decision_type: "OVERPAYMENT_RESOLUTION",
+                bank_transaction_id: txId,
+                order_id: orderId,
+                reason: methodPlan,
+                security_mode: securityMode,
+                credential_id: webauthnProof.credential_id,
+                challenge_used: webauthnProof.challenge_used,
+                assertion_signature: webauthnProof.assertion_signature,
+                client_data_json: webauthnProof.client_data_json,
+                authenticator_data: webauthnProof.authenticator_data
+            })
+        });
+
+        // 1. Đóng hộp thoại
+        const modalEl = document.getElementById("overpaymentModal");
+        if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
+
+        // 2. Đánh dấu tx trong bộ nhớ là đã xử lý
+        const targetTx = reconBankTxs.find((t) => Number(t.id) === txId);
+        if (targetTx) {
+            targetTx.is_handled = true;
+            targetTx.handling_method = methodPlan;
+        }
+
+        // 3. Ghi nhận vào lịch sử phê duyệt
+        reconDecisions.unshift({
+            id: resp.decision_id || Date.now(),
+            order_id: orderId,
+            order_code: resp.order_code || (targetTx ? targetTx.order_code : null),
+            bank_transaction_id: txId,
+            reference_code: resp.reference_code || (targetTx ? targetTx.reference_code : null),
+            tx_amount: targetTx ? targetTx.amount : null,
+            allocated_amount: targetTx ? targetTx.allocated_amount : null,
+            unallocated_amount: targetTx ? targetTx.unallocated_amount : null,
+            reviewer_id: getCurrentUserId(),
+            reviewer_name: "Quản trị viên",
+            decision_type: "OVERPAYMENT_RESOLUTION",
+            reason: methodPlan,
+            biometric_verified: securityMode === "WEBAUTHN_SIGN",
+            review_date: new Date().toISOString()
+        });
+
+        // 4. Các khoản đã xử lý sẽ không hiện ở tab chờ xử lý nữa
+        renderUnmatchedTable();
+        renderDecisionsHistory();
+
+        showToast("Đã ghi nhận phương thức xử lý tiền thừa thành công!", "success");
+    } catch (error) {
+        if (errorBox) {
+            errorBox.textContent = error.message || "Xử lý thất bại.";
+            errorBox.classList.remove("d-none");
+        }
+        showToast(error.message || "Xử lý thất bại.", "danger");
+    } finally {
+        isSubmittingDecision = false;
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = oldBtnText;
+        }
+    }
+}
+
+// 4.3 Mở hộp thoại Ghép tiền vào hóa đơn
 function openManualMatchModal(txId) {
     const tx = reconBankTxs.find((t) => Number(t.id) === Number(txId));
     if (!tx) return;
@@ -249,16 +454,24 @@ function openManualMatchModal(txId) {
     if (orderSelect) {
         orderSelect.innerHTML = reconOrders
             .map((ord) => {
+                const isCancelled = String(ord.order_status).toUpperCase() === "CANCELLED_ORDER";
+                const isPaid = String(ord.payment_status).toUpperCase() === "PAID";
                 const rem = Math.max(0, Number(ord.total_amount || 0) - Number(ord.net_paid_amount || 0));
-                const statusLabel = rem === 0 ? "Đã thu đủ" : `Còn thiếu: ${formatVND(rem)}`;
+                const statusLabel = isCancelled
+                    ? "Đã hủy (Chặn ghép)"
+                    : (isPaid || rem === 0)
+                    ? "Đã thu đủ (Khách đã chuyển lại)"
+                    : `Còn thiếu: ${formatVND(rem)}`;
                 return `<option value="${ord.id}">Hóa đơn ${escapeReconHtml(ord.order_code)} — ${statusLabel}</option>`;
             })
             .join("");
 
-        const firstUnpaid = reconOrders.find(
-            (o) => Math.max(0, Number(o.total_amount || 0) - Number(o.net_paid_amount || 0)) > 0
+        const firstUnpaidValid = reconOrders.find(
+            (o) =>
+                String(o.order_status).toUpperCase() !== "CANCELLED_ORDER" &&
+                Math.max(0, Number(o.total_amount || 0) - Number(o.net_paid_amount || 0)) > 0
         );
-        if (firstUnpaid) orderSelect.value = String(firstUnpaid.id);
+        if (firstUnpaidValid) orderSelect.value = String(firstUnpaidValid.id);
     }
 
     updateSuggestedMatchAmount();
@@ -269,20 +482,101 @@ function openManualMatchModal(txId) {
 
 function updateSuggestedMatchAmount() {
     const txId = Number(document.getElementById("match-tx-id")?.value || 0);
-    const orderId = Number(document.getElementById("match-order-select")?.value || 0);
+    const orderSelect = document.getElementById("match-order-select");
+    const orderId = Number(orderSelect?.value || 0);
+    const orderGroup = document.getElementById("match-order-group") || orderSelect?.closest(".mb-3");
     const amountInput = document.getElementById("match-amount-input");
-    if (!amountInput) return;
+    const amountGroup = document.getElementById("match-amount-group");
+    const amountLabel = document.getElementById("match-amount-label");
+    const noticeBox = document.getElementById("match-paid-notice-box");
+    const reasonLabel = document.getElementById("match-reason-label");
+    const reasonInput = document.getElementById("match-reason-input");
+    const confirmBtn = document.getElementById("btn-confirm-match");
 
     const tx = reconBankTxs.find((t) => Number(t.id) === txId);
     const ord = reconOrders.find((o) => Number(o.id) === orderId);
     if (!tx || !ord) return;
 
     const txUnalloc = Number(tx.unallocated_amount || 0);
+    const isCancelled = String(ord.order_status).toUpperCase() === "CANCELLED_ORDER";
+    const isPaid = String(ord.payment_status).toUpperCase() === "PAID";
     const ordRem = Math.max(0, Number(ord.total_amount || 0) - Number(ord.net_paid_amount || 0));
-    const suggested = ordRem > 0 ? Math.min(txUnalloc, ordRem) : txUnalloc;
-    amountInput.value = String(suggested);
+
+    // Nếu đơn hàng đã thu đủ (khách đã chuyển lại)
+    if (!isCancelled && (isPaid || ordRem <= 0)) {
+        // 1. Ẩn chỗ chọn hóa đơn nhận tiền
+        if (orderGroup) {
+            orderGroup.classList.add("d-none");
+        }
+
+        // 2. Ẩn phần số tiền chuyển thừa
+        if (amountGroup) {
+            amountGroup.classList.add("d-none");
+        }
+        if (amountInput) {
+            amountInput.value = String(txUnalloc);
+            amountInput.disabled = true;
+        }
+
+        // 3. Chỉ ghi: Hóa đơn (mã hóa đơn) đã được thanh toán đủ (khách đã chuyển lại), bỏ chú thích bên dưới
+        if (noticeBox) {
+            noticeBox.className = "alert alert-warning py-2 px-3 small mb-3 fw-semibold";
+            noticeBox.textContent = `Hóa đơn ${ord.order_code} đã được thanh toán đủ (khách đã chuyển lại)`;
+            noticeBox.classList.remove("d-none");
+        }
+
+        // 4. Nhãn & nội dung phương thức xử lý
+        if (reasonLabel) {
+            reasonLabel.innerHTML = 'Phương thức xử lý tiền thừa <span class="text-danger">*</span>';
+        }
+        if (reasonInput) {
+            if (!reasonInput.value || reasonInput.value.includes("Khách hàng xác nhận chuyển khoản thanh toán")) {
+                reasonInput.value = `Khách hàng đã chuyển lại thanh toán đơn ${ord.order_code}, khoản chuyển sai nội dung này đã được xử lý hoàn trả tiền thừa cho khách.`;
+            }
+            reasonInput.placeholder = "Ghi rõ phương thức xử lý khoản tiền thừa (ví dụ: Đã hoàn tiền mặt cho khách tại quầy, chuyển khoản lại...)...";
+        }
+
+        // 5. Đổi nút thành "Xác nhận" giống bên hộp thoại xử lý thừa tiền
+        if (confirmBtn) {
+            confirmBtn.textContent = "Xác nhận";
+            confirmBtn.className = "btn-fp-success";
+        }
+    } else {
+        // Trường hợp đơn hàng còn phải thu bình thường: hiện lại đầy đủ
+        if (orderGroup) {
+            orderGroup.classList.remove("d-none");
+        }
+        if (amountGroup) {
+            amountGroup.classList.remove("d-none");
+        }
+        if (amountInput) {
+            amountInput.disabled = false;
+            const suggested = ordRem > 0 ? Math.min(txUnalloc, ordRem) : txUnalloc;
+            amountInput.value = String(suggested);
+        }
+        if (amountLabel) {
+            amountLabel.innerHTML = 'Số tiền ghép vào hóa đơn (VNĐ) <span class="text-danger">*</span>';
+        }
+        if (noticeBox) {
+            noticeBox.classList.add("d-none");
+        }
+        if (reasonLabel) {
+            reasonLabel.innerHTML = 'Lý do xác nhận <span class="text-danger">*</span>';
+        }
+        if (reasonInput) {
+            if (reasonInput.value.includes("khoản chuyển sai nội dung này đã được xử lý")) {
+                reasonInput.value = "Khách hàng xác nhận chuyển khoản thanh toán cho hóa đơn nhưng quên ghi mã đơn.";
+            }
+            reasonInput.placeholder = "Nhập lý do xác nhận...";
+        }
+        if (confirmBtn) {
+            confirmBtn.textContent = "Xác nhận";
+            confirmBtn.className = "btn-fp-success";
+        }
+    }
 }
 
+// 5. Xử lý xác nhận Ghép tiền vào hóa đơn
 // 5. Xử lý xác nhận Ghép tiền vào hóa đơn
 async function handleManualMatchSubmit(event) {
     event.preventDefault();
@@ -299,50 +593,91 @@ async function handleManualMatchSubmit(event) {
 
     if (!reason || reason.length < 5) {
         if (errorBox) {
-            errorBox.textContent = "Vui lòng nhập rõ lý do xác nhận.";
+            errorBox.textContent = "Vui lòng nhập rõ lý do hoặc phương thức xử lý (ít nhất 5 ký tự).";
             errorBox.classList.remove("d-none");
         }
         return;
     }
 
-    if (securityMode === "BYPASS_WEBAUTHN_TEST") {
-        if (errorBox) {
-            errorBox.textContent = "Từ chối thực hiện: Bắt buộc phải xác nhận bằng khóa bảo mật thiết bị trước khi ghép tiền.";
-            errorBox.classList.remove("d-none");
-        }
-        showToast("Đã chặn yêu cầu chưa qua xác thực bảo mật!", "danger");
-        return;
-    }
+    const selectedOrd = reconOrders.find((o) => Number(o.id) === orderId);
+    const isOrdPaid = selectedOrd && (
+        String(selectedOrd.payment_status).toUpperCase() === "PAID" ||
+        Math.max(0, Number(selectedOrd.total_amount || 0) - Number(selectedOrd.net_paid_amount || 0)) <= 0
+    );
+
+    // Nếu đơn hàng đã thu đủ (khách đã chuyển lại), tự động chuyển loại quyết định sang OVERPAYMENT_RESOLUTION
+    const effectiveDecisionType = isOrdPaid ? "OVERPAYMENT_RESOLUTION" : "APPROVE_MANUAL_MATCH";
 
     isSubmittingDecision = true;
     try {
-        const webauthnProof = await requestWebAuthnAssertion({
-            decision_type: "APPROVE_MANUAL_MATCH",
-            order_id: orderId,
-            bank_transaction_id: bankTxId
-        });
-
-        await apiRequest("/decisions", {
-            method: "POST",
-            body: JSON.stringify({
-                reviewer_id: getCurrentUserId(),
-                decision_type: "APPROVE_MANUAL_MATCH",
-                bank_transaction_id: bankTxId,
+        if (securityMode === "BYPASS_WEBAUTHN_TEST") {
+            await apiRequest("/decisions", {
+                method: "POST",
+                body: JSON.stringify({
+                    reviewer_id: getCurrentUserId(),
+                    decision_type: effectiveDecisionType,
+                    bank_transaction_id: bankTxId,
+                    order_id: orderId,
+                    allocated_amount: isOrdPaid ? 0 : manualAmount,
+                    reason,
+                    security_mode: "BYPASS_WEBAUTHN_TEST",
+                    credential_id: null,
+                    challenge_used: null,
+                    assertion_signature: null
+                })
+            });
+        } else {
+            const webauthnProof = await requestWebAuthnAssertion({
+                decision_type: effectiveDecisionType,
                 order_id: orderId,
-                allocated_amount: manualAmount,
-                reason,
-                credential_id: webauthnProof.credential_id,
-                challenge_used: webauthnProof.challenge_used,
-                assertion_signature: webauthnProof.assertion_signature
-            })
-        });
+                bank_transaction_id: bankTxId
+            });
+
+            await apiRequest("/decisions", {
+                method: "POST",
+                body: JSON.stringify({
+                    reviewer_id: getCurrentUserId(),
+                    decision_type: effectiveDecisionType,
+                    bank_transaction_id: bankTxId,
+                    order_id: orderId,
+                    allocated_amount: isOrdPaid ? 0 : manualAmount,
+                    reason,
+                    security_mode: "WEBAUTHN_SIGN",
+                    credential_id: webauthnProof.credential_id,
+                    challenge_used: webauthnProof.challenge_used,
+                    assertion_signature: webauthnProof.assertion_signature,
+                    client_data_json: webauthnProof.client_data_json,
+                    authenticator_data: webauthnProof.authenticator_data
+                })
+            });
+        }
     } catch (error) {
         if (error.isNetworkError) {
+            if (securityMode === "BYPASS_WEBAUTHN_TEST") {
+                if (errorBox) {
+                    errorBox.textContent = "401 Unauthorized: Từ chối thực hiện do không có chữ ký xác thực khóa bảo mật WebAuthn!";
+                    errorBox.classList.remove("d-none");
+                }
+                showToast("Đã chặn yêu cầu chưa qua xác thực bảo mật (401)!", "danger");
+                isSubmittingDecision = false;
+                return;
+            }
+
             const store = getDemoStore();
             const tx = store.bank_transactions.find((t) => Number(t.id) === bankTxId);
             const ord = store.orders.find((o) => Number(o.id) === orderId);
 
             if (!tx || !ord) {
+                isSubmittingDecision = false;
+                return;
+            }
+
+            if (String(ord.order_status).toUpperCase() === "CANCELLED_ORDER") {
+                if (errorBox) {
+                    errorBox.textContent = `Hóa đơn ${ord.order_code} đã bị hủy nên không thể phân bổ tiền.`;
+                    errorBox.classList.remove("d-none");
+                }
+                showToast("Không thể ghép tiền vào hóa đơn đã hủy (400)!", "danger");
                 isSubmittingDecision = false;
                 return;
             }
@@ -353,7 +688,7 @@ async function handleManualMatchSubmit(event) {
                     errorBox.textContent = `Hóa đơn ${ord.order_code} đã thanh toán đủ nên không thể nhận thêm tiền.`;
                     errorBox.classList.remove("d-none");
                 }
-                showToast("Không thể ghép tiền vào hóa đơn đã thu đủ!", "danger");
+                showToast("Không thể ghép tiền vào hóa đơn đã thu đủ (400)!", "danger");
                 isSubmittingDecision = false;
                 return;
             }
@@ -411,6 +746,7 @@ async function handleManualMatchSubmit(event) {
                 errorBox.textContent = error.message;
                 errorBox.classList.remove("d-none");
             }
+            showToast(error.message || "Yêu cầu bị từ chối!", "danger");
             isSubmittingDecision = false;
             return;
         }
@@ -419,6 +755,14 @@ async function handleManualMatchSubmit(event) {
     isSubmittingDecision = false;
     const modalEl = document.getElementById("manualMatchModal");
     if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
+
+    const targetTx = reconBankTxs.find((t) => Number(t.id) === bankTxId);
+    if (targetTx) {
+        targetTx.is_handled = true;
+    }
+    // Các khoản đã xử lý sẽ không hiện ở tab chờ xử lý nữa
+    renderUnmatchedTable();
+
     showToast("Đã ghép khoản tiền vào hóa đơn thành công!", "success");
     loadReconciliationWorkspace(false);
 }
@@ -473,7 +817,9 @@ async function handleReverseAllocSubmit(event) {
                 reason,
                 credential_id: webauthnProof.credential_id,
                 challenge_used: webauthnProof.challenge_used,
-                assertion_signature: webauthnProof.assertion_signature
+                assertion_signature: webauthnProof.assertion_signature,
+                client_data_json: webauthnProof.client_data_json,
+                authenticator_data: webauthnProof.authenticator_data
             })
         });
     } catch (error) {
@@ -558,7 +904,7 @@ async function handleReverseAllocSubmit(event) {
     isSubmittingDecision = false;
     const modalEl = document.getElementById("reverseAllocModal");
     if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
-    showToast("Đã hoàn đảo giao dịch về danh sách chờ ghép đơn!", "success");
+    showToast("Đã hoàn đảo giao dịch về danh sách chờ xử lý!", "success");
     loadReconciliationWorkspace(false);
 }
 

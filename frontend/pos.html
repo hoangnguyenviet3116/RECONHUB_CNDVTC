@@ -33,14 +33,26 @@
                     <section class="recon-workspace-card" data-gsap="card">
                         <div class="d-flex align-items-center justify-content-between pb-2 mb-3 border-bottom">
                             <h1 class="h5 fw-bold mb-0">Tạo Hóa Đơn Mới</h1>
-                            <span class="fp-badge fp-badge-success">Ca đang mở</span>
+                            <span class="fp-badge fp-badge-success" id="pos-shift-status-badge">Ca đang mở</span>
+                        </div>
+
+                        <!-- Cảnh báo khi ca đã đóng hoặc hết thời gian làm việc -->
+                        <div id="pos-shift-closed-alert" class="alert alert-warning py-2 px-3 small d-none mb-3 border-0" role="alert">
+                            <div class="d-flex align-items-center gap-2">
+                                <svg class="hi-icon hi-icon-sm text-warning" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                                </svg>
+                                <div id="pos-shift-closed-alert-text">
+                                    <strong>Ca làm việc đã kết thúc.</strong> Vui lòng mở ca mới để tiếp tục tạo đơn hàng.
+                                </div>
+                            </div>
                         </div>
 
                         <form id="pos-create-order-form" novalidate>
                             <div class="mb-3">
                                 <label for="pos-shift-select" class="form-label small fw-semibold">Ca làm việc</label>
                                 <select id="pos-shift-select" class="form-select form-select-sm" required>
-                                    <option value="1">Ca sáng — 24/10/2026</option>
+                                    <option value="">Đang tải danh sách ca...</option>
                                 </select>
                             </div>
 
@@ -76,7 +88,7 @@
                         </form>
                     </section>
 
-                    <!-- Khối 2: Loa báo tiền vào tại quầy -->
+                    <!-- Khối 2: Loa báo tiền vào tại quầy (chỉ có bật/tắt, tự động phát khi thanh toán thành công) -->
                     <section class="recon-workspace-card" data-gsap="card">
                         <div class="d-flex align-items-center justify-content-between mb-2">
                             <div class="d-flex align-items-center gap-2">
@@ -85,33 +97,24 @@
                                         <path d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" />
                                     </svg>
                                 </span>
-                                <h2 class="h6 fw-bold mb-0">Loa Báo Nhận Tiền</h2>
+                                <div>
+                                    <h2 class="h6 fw-bold mb-0">Loa Báo Nhận Tiền</h2>
+                                    <span class="text-secondary" style="font-size: 0.72rem;">Tự động phát khi nhận thanh toán</span>
+                                </div>
                             </div>
                             <div class="form-check form-switch mb-0">
-                                <input class="form-check-input" type="checkbox" id="tts-enable-toggle" checked aria-label="Bật loa thông báo">
+                                <input class="form-check-input" type="checkbox" id="tts-enable-toggle" checked aria-label="Bật/Tắt loa thông báo">
                             </div>
                         </div>
 
-                        <div class="p-2 px-3 rounded-3 bg-light border mb-2">
+                        <div class="p-2 px-3 rounded-3 bg-light border">
                             <div class="d-flex justify-content-between align-items-center">
                                 <span class="text-secondary" style="font-size: 0.72rem;">Thông báo gần nhất</span>
-                                <span class="text-secondary" style="font-size: 0.7rem;" id="tts-last-time">Đang bật</span>
+                                <span class="text-secondary font-numeric" style="font-size: 0.7rem;" id="tts-last-time">Đang bật</span>
                             </div>
                             <div id="tts-last-message" class="small text-dark fw-medium mt-1" style="font-size: 0.8rem;">
-                                Loa thu ngân đang hoạt động.
+                                Loa đang hoạt động. Sẽ tự động đọc thông báo khi nhận tiền thành công.
                             </div>
-                        </div>
-
-                        <div class="d-flex gap-1">
-                            <button type="button" class="btn btn-sm btn-light border flex-fill" style="font-size: 0.74rem;" id="btn-test-tts-paid">
-                                🔊 Đủ tiền
-                            </button>
-                            <button type="button" class="btn btn-sm btn-light border flex-fill" style="font-size: 0.74rem;" id="btn-test-tts-partial">
-                                🔊 Thiếu tiền
-                            </button>
-                            <button type="button" class="btn btn-sm btn-light border flex-fill" style="font-size: 0.74rem;" id="btn-test-tts-overpaid">
-                                🔊 Dư tiền
-                            </button>
                         </div>
                     </section>
 
@@ -124,10 +127,19 @@
                     <section class="recon-workspace-card h-100" data-gsap="card">
                         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pb-3 mb-3 border-bottom">
                             <div>
-                                <h2 class="h5 fw-bold mb-0">Hóa Đơn Trong Ca</h2>
+                                <h2 class="h5 fw-bold mb-0 d-flex align-items-center gap-2">
+                                    Hóa Đơn Trong Ca
+                                    <span id="pos-sse-status-badge" class="badge bg-success-subtle text-success border border-success-subtle d-inline-flex align-items-center gap-1" style="font-size: 0.7rem; font-weight: 500;">
+                                        <span class="spinner-grow spinner-grow-sm text-success" style="width:6px;height:6px;" role="status"></span> Real-time SSE
+                                    </span>
+                                </h2>
                             </div>
 
                             <div class="d-flex flex-wrap align-items-center gap-2">
+                                <select id="pos-filter-shift" class="form-select form-select-sm" style="width: auto;" title="Lọc theo ca làm việc">
+                                    <option value="">Đang tải danh sách ca...</option>
+                                </select>
+
                                 <select id="pos-filter-payment" class="form-select form-select-sm" style="width: auto;">
                                     <option value="ALL">Tất cả trạng thái</option>
                                     <option value="UNPAID">Chờ thanh toán</option>
@@ -140,6 +152,27 @@
                                 <button type="button" class="btn-fp-outline py-1 px-2" id="btn-pos-refresh" title="Làm mới">
                                     ↻
                                 </button>
+                            </div>
+                        </div>
+
+                        <!-- Thanh tổng hợp đối soát nhanh hóa đơn tại quầy -->
+                        <div class="pos-summary-bar d-flex flex-wrap align-items-center justify-content-between gap-2 p-2 px-3 rounded-3 bg-light border mb-3 small">
+                            <div>
+                                <span class="text-secondary">Tổng hiển thị:</span>
+                                <strong class="font-numeric text-dark" id="pos-stat-total">0 ₫</strong>
+                                <span class="text-muted" style="font-size:0.75rem;" id="pos-stat-count">(0 đơn)</span>
+                            </div>
+                            <div>
+                                <span class="text-secondary">Hợp lệ (Sổ quỹ):</span>
+                                <strong class="font-numeric text-primary" id="pos-stat-valid">0 ₫</strong>
+                            </div>
+                            <div>
+                                <span class="text-secondary">Đã thu:</span>
+                                <strong class="font-numeric text-success" id="pos-stat-paid">0 ₫</strong>
+                            </div>
+                            <div>
+                                <span class="text-secondary">Còn thiếu:</span>
+                                <strong class="font-numeric text-warning" id="pos-stat-remaining">0 ₫</strong>
                             </div>
                         </div>
 
@@ -170,8 +203,8 @@
         </div>
     </main>
 
-    <!-- =======================================================================
-         HỘP THOẠI HIỂN THỊ MÃ VIETQR CHO KHÁCH QUÉT
+<!-- =======================================================================
+         HỘP THOẠI HIỂN THỊ MÃ VIETQR / BIÊN LAI THANH TOÁN
          ======================================================================= -->
     <div class="modal fade" id="vietqrModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" style="max-width: 420px;">
@@ -179,32 +212,44 @@
                 <div class="modal-header border-bottom pb-2 pt-3 px-4">
                     <div>
                         <span class="fp-badge fp-badge-dark mb-1" id="modal-qr-status-badge">Mã QR đang hoạt động</span>
-                        <h3 class="h6 fw-bold mb-0">Quét Mã VietQR Thanh Toán</h3>
+                        <h3 class="h6 fw-bold mb-0" id="modal-qr-title">Quét Mã VietQR Thanh Toán</h3>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
                 </div>
 
                 <div class="modal-body px-4 pb-4 pt-3 text-center">
-                    <div class="qr-frame-box mb-3">
+                    <div class="qr-frame-box mb-3" id="modal-qr-frame-box">
                         <img id="modal-qr-image" src="" alt="Mã VietQR" class="img-fluid rounded-2" style="max-height: 220px;">
                     </div>
 
                     <div class="p-3 rounded-3 bg-light border text-start small mb-3">
                         <div class="d-flex justify-content-between py-1 border-bottom">
-                            <span class="text-secondary">Hóa đơn:</span>
+                            <span class="text-secondary">Mã hóa đơn:</span>
                             <strong id="modal-qr-order-code">ORD1003</strong>
                         </div>
+                        <div class="d-flex justify-content-between py-1 border-bottom d-none" id="modal-qr-total-row">
+                            <span class="text-secondary">Tổng đơn hàng:</span>
+                            <strong class="text-secondary font-numeric" id="modal-qr-total-amount">0 ₫</strong>
+                        </div>
+                        <div class="d-flex justify-content-between py-1 border-bottom d-none" id="modal-qr-paid-amount-row">
+                            <span class="text-secondary">Đã thanh toán trước:</span>
+                            <strong class="text-success font-numeric" id="modal-qr-paid-amount">0 ₫</strong>
+                        </div>
                         <div class="d-flex justify-content-between py-1 border-bottom">
-                            <span class="text-secondary">Số tiền:</span>
+                            <span class="text-secondary" id="modal-qr-amount-label">Số tiền:</span>
                             <strong class="text-primary fs-6 font-numeric" id="modal-qr-expected-amount">15.000.000 ₫</strong>
                         </div>
-                        <div class="d-flex justify-content-between pt-1">
+                        <div class="d-flex justify-content-between py-1" id="modal-qr-content-row">
                             <span class="text-secondary">Nội dung CK:</span>
                             <strong class="text-dark" id="modal-qr-transfer-content">TT ORD1003</strong>
                         </div>
+                        <div class="d-flex justify-content-between pt-1 border-top d-none" id="modal-qr-paid-time-row">
+                            <span class="text-secondary">Thời gian CK:</span>
+                            <strong class="text-dark font-numeric" id="modal-qr-paid-time">—</strong>
+                        </div>
                     </div>
 
-                    <div class="d-flex gap-2">
+                    <div class="d-flex gap-2" id="modal-qr-actions">
                         <button type="button" class="btn-fp-outline flex-fill py-2" id="btn-reissue-qr" style="font-size: 0.82rem;">
                             ↻ Đổi mã QR mới
                         </button>

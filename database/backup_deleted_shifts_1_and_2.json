@@ -1,0 +1,843 @@
+{
+  "shifts": [
+    {
+      "id": 1,
+      "merchant_id": 1,
+      "name": "Ca sáng — 24/10/2026",
+      "target_revenue": "100000000.00",
+      "start_time": "2026-10-24T20:19:00",
+      "end_time": "2026-10-25T04:19:00",
+      "closed_at": "2026-10-24T22:36:45.666098",
+      "status": "ShiftStatus.CLOSED"
+    },
+    {
+      "id": 2,
+      "merchant_id": 1,
+      "name": "Ca chiều — 24/10/2026",
+      "target_revenue": "100000000.00",
+      "start_time": "2026-10-24T13:00:00",
+      "end_time": "2026-10-25T17:00:00",
+      "closed_at": "2026-10-24T22:36:42.258632",
+      "status": "ShiftStatus.CLOSED"
+    }
+  ],
+  "orders": [
+    {
+      "id": 1,
+      "shift_id": 1,
+      "created_by": 3,
+      "order_code": "ORD1001",
+      "total_amount": "186000.00",
+      "customer_note": null,
+      "order_status": "OrderStatus.CONFIRMED_ORDER",
+      "payment_status": "PaymentStatus.PAID",
+      "created_at": "2026-10-24T20:20:06.426100"
+    },
+    {
+      "id": 2,
+      "shift_id": 1,
+      "created_by": 3,
+      "order_code": "ORD1002",
+      "total_amount": "200000.00",
+      "customer_note": null,
+      "order_status": "OrderStatus.CONFIRMED_ORDER",
+      "payment_status": "PaymentStatus.PAID",
+      "created_at": "2026-10-24T20:30:43.457914"
+    },
+    {
+      "id": 3,
+      "shift_id": 1,
+      "created_by": 3,
+      "order_code": "ORD1003",
+      "total_amount": "46200.00",
+      "customer_note": null,
+      "order_status": "OrderStatus.CONFIRMED_ORDER",
+      "payment_status": "PaymentStatus.PAID",
+      "created_at": "2026-10-24T20:43:33.704085"
+    },
+    {
+      "id": 4,
+      "shift_id": 1,
+      "created_by": 3,
+      "order_code": "ORD1004",
+      "total_amount": "200000.00",
+      "customer_note": null,
+      "order_status": "OrderStatus.CONFIRMED_ORDER",
+      "payment_status": "PaymentStatus.PAID",
+      "created_at": "2026-10-24T20:43:49.696515"
+    },
+    {
+      "id": 5,
+      "shift_id": 1,
+      "created_by": 3,
+      "order_code": "ORD1005",
+      "total_amount": "200000.00",
+      "customer_note": null,
+      "order_status": "OrderStatus.CONFIRMED_ORDER",
+      "payment_status": "PaymentStatus.PAID",
+      "created_at": "2026-10-24T20:44:09.835571"
+    },
+    {
+      "id": 6,
+      "shift_id": 1,
+      "created_by": 3,
+      "order_code": "ORD1006",
+      "total_amount": "200000.00",
+      "customer_note": null,
+      "order_status": "OrderStatus.CONFIRMED_ORDER",
+      "payment_status": "PaymentStatus.PAID",
+      "created_at": "2026-10-24T20:44:31.452690"
+    },
+    {
+      "id": 7,
+      "shift_id": 1,
+      "created_by": 3,
+      "order_code": "ORD1007",
+      "total_amount": "200000.00",
+      "customer_note": null,
+      "order_status": "OrderStatus.CONFIRMED_ORDER",
+      "payment_status": "PaymentStatus.PAID",
+      "created_at": "2026-10-24T20:46:06.781230"
+    },
+    {
+      "id": 8,
+      "shift_id": 1,
+      "created_by": 3,
+      "order_code": "ORD1008",
+      "total_amount": "200000.00",
+      "customer_note": null,
+      "order_status": "OrderStatus.CONFIRMED_ORDER",
+      "payment_status": "PaymentStatus.PAID",
+      "created_at": "2026-10-24T20:51:48.520401"
+    },
+    {
+      "id": 9,
+      "shift_id": 2,
+      "created_by": 3,
+      "order_code": "ORD1009",
+      "total_amount": "200000.00",
+      "customer_note": null,
+      "order_status": "OrderStatus.CONFIRMED_ORDER",
+      "payment_status": "PaymentStatus.PAID",
+      "created_at": "2026-10-24T21:11:25.306398"
+    },
+    {
+      "id": 10,
+      "shift_id": 2,
+      "created_by": 3,
+      "order_code": "ORD1010",
+      "total_amount": "200000.00",
+      "customer_note": null,
+      "order_status": "OrderStatus.CONFIRMED_ORDER",
+      "payment_status": "PaymentStatus.PAID",
+      "created_at": "2026-10-24T21:12:47.918792"
+    },
+    {
+      "id": 11,
+      "shift_id": 2,
+      "created_by": 3,
+      "order_code": "ORD1011",
+      "total_amount": "200000.00",
+      "customer_note": null,
+      "order_status": "OrderStatus.CONFIRMED_ORDER",
+      "payment_status": "PaymentStatus.PAID",
+      "created_at": "2026-10-24T21:13:25.859571"
+    },
+    {
+      "id": 12,
+      "shift_id": 2,
+      "created_by": 3,
+      "order_code": "ORD1012",
+      "total_amount": "200000.00",
+      "customer_note": null,
+      "order_status": "OrderStatus.CONFIRMED_ORDER",
+      "payment_status": "PaymentStatus.PAID",
+      "created_at": "2026-10-24T21:13:34.746384"
+    },
+    {
+      "id": 13,
+      "shift_id": 2,
+      "created_by": 3,
+      "order_code": "ORD1013",
+      "total_amount": "263000.00",
+      "customer_note": null,
+      "order_status": "OrderStatus.CONFIRMED_ORDER",
+      "payment_status": "PaymentStatus.PAID",
+      "created_at": "2026-10-24T21:16:21.211243"
+    },
+    {
+      "id": 16,
+      "shift_id": 2,
+      "created_by": 3,
+      "order_code": "ORD1014",
+      "total_amount": "200000.00",
+      "customer_note": null,
+      "order_status": "OrderStatus.CONFIRMED_ORDER",
+      "payment_status": "PaymentStatus.PAID",
+      "created_at": "2026-10-24T21:29:04.435996"
+    },
+    {
+      "id": 17,
+      "shift_id": 2,
+      "created_by": 3,
+      "order_code": "ORD1015",
+      "total_amount": "200000.00",
+      "customer_note": null,
+      "order_status": "OrderStatus.CONFIRMED_ORDER",
+      "payment_status": "PaymentStatus.PAID",
+      "created_at": "2026-10-24T21:30:34.475680"
+    },
+    {
+      "id": 18,
+      "shift_id": 2,
+      "created_by": 3,
+      "order_code": "ORD1016",
+      "total_amount": "200000.00",
+      "customer_note": null,
+      "order_status": "OrderStatus.CONFIRMED_ORDER",
+      "payment_status": "PaymentStatus.PAID",
+      "created_at": "2026-10-24T21:31:14.041604"
+    }
+  ],
+  "payment_requests": [
+    {
+      "id": 1,
+      "order_id": 1,
+      "request_code": "REQ_ORD1001_1C16",
+      "expected_amount": "186000.00",
+      "qr_url": "https://img.vietqr.io/image/970422-0888999777-compact2.png?amount=186000&addInfo=TT%20ORD1001",
+      "status": "PaymentRequestStatus.FULFILLED"
+    },
+    {
+      "id": 2,
+      "order_id": 2,
+      "request_code": "REQ_ORD1002_6F7E",
+      "expected_amount": "200000.00",
+      "qr_url": "https://img.vietqr.io/image/970422-0888999777-compact2.png?amount=200000&addInfo=TT%20ORD1002",
+      "status": "PaymentRequestStatus.FULFILLED"
+    },
+    {
+      "id": 3,
+      "order_id": 3,
+      "request_code": "REQ_ORD1003_9971",
+      "expected_amount": "46200.00",
+      "qr_url": "https://img.vietqr.io/image/970422-0888999777-compact2.png?amount=46200&addInfo=TT%20ORD1003",
+      "status": "PaymentRequestStatus.FULFILLED"
+    },
+    {
+      "id": 4,
+      "order_id": 4,
+      "request_code": "REQ_ORD1004_2484",
+      "expected_amount": "200000.00",
+      "qr_url": "https://img.vietqr.io/image/970422-0888999777-compact2.png?amount=200000&addInfo=TT%20ORD1004",
+      "status": "PaymentRequestStatus.FULFILLED"
+    },
+    {
+      "id": 5,
+      "order_id": 5,
+      "request_code": "REQ_ORD1005_3BCD",
+      "expected_amount": "200000.00",
+      "qr_url": "https://img.vietqr.io/image/970422-0888999777-compact2.png?amount=200000&addInfo=TT%20ORD1005",
+      "status": "PaymentRequestStatus.FULFILLED"
+    },
+    {
+      "id": 6,
+      "order_id": 6,
+      "request_code": "REQ_ORD1006_55EB",
+      "expected_amount": "200000.00",
+      "qr_url": "https://img.vietqr.io/image/970422-0888999777-compact2.png?amount=200000&addInfo=TT%20ORD1006",
+      "status": "PaymentRequestStatus.FULFILLED"
+    },
+    {
+      "id": 7,
+      "order_id": 7,
+      "request_code": "REQ_ORD1007_D078",
+      "expected_amount": "200000.00",
+      "qr_url": "https://img.vietqr.io/image/970422-0888999777-compact2.png?amount=200000&addInfo=TT%20ORD1007",
+      "status": "PaymentRequestStatus.FULFILLED"
+    },
+    {
+      "id": 8,
+      "order_id": 8,
+      "request_code": "REQ_ORD1008_9C3A",
+      "expected_amount": "200000.00",
+      "qr_url": "https://img.vietqr.io/image/970422-0888999777-compact2.png?amount=200000&addInfo=TT%20ORD1008",
+      "status": "PaymentRequestStatus.FULFILLED"
+    },
+    {
+      "id": 9,
+      "order_id": 9,
+      "request_code": "REQ_ORD1009_BB82",
+      "expected_amount": "200000.00",
+      "qr_url": "https://img.vietqr.io/image/970422-0888999777-compact2.png?amount=200000&addInfo=TT%20ORD1009",
+      "status": "PaymentRequestStatus.FULFILLED"
+    },
+    {
+      "id": 10,
+      "order_id": 10,
+      "request_code": "REQ_ORD1010_2C5A",
+      "expected_amount": "200000.00",
+      "qr_url": "https://img.vietqr.io/image/970422-0888999777-compact2.png?amount=200000&addInfo=TT%20ORD1010",
+      "status": "PaymentRequestStatus.FULFILLED"
+    },
+    {
+      "id": 11,
+      "order_id": 11,
+      "request_code": "REQ_ORD1011_059E",
+      "expected_amount": "200000.00",
+      "qr_url": "https://img.vietqr.io/image/970422-0888999777-compact2.png?amount=200000&addInfo=TT%20ORD1011",
+      "status": "PaymentRequestStatus.FULFILLED"
+    },
+    {
+      "id": 12,
+      "order_id": 12,
+      "request_code": "REQ_ORD1012_6494",
+      "expected_amount": "80000.00",
+      "qr_url": "https://img.vietqr.io/image/970422-0888999777-compact2.png?amount=80000&addInfo=TT%20ORD1012",
+      "status": "PaymentRequestStatus.FULFILLED"
+    },
+    {
+      "id": 13,
+      "order_id": 13,
+      "request_code": "REQ_ORD1013_6D8F",
+      "expected_amount": "263000.00",
+      "qr_url": "https://img.vietqr.io/image/970422-0888999777-compact2.png?amount=263000&addInfo=TT%20ORD1013",
+      "status": "PaymentRequestStatus.FULFILLED"
+    },
+    {
+      "id": 20,
+      "order_id": 16,
+      "request_code": "REQ_ORD1014_FD50",
+      "expected_amount": "200000.00",
+      "qr_url": "https://img.vietqr.io/image/970422-0888999777-compact2.png?amount=200000&addInfo=TT%20ORD1014",
+      "status": "PaymentRequestStatus.REVOKED"
+    },
+    {
+      "id": 21,
+      "order_id": 16,
+      "request_code": "REQ_ORD1014_3B37",
+      "expected_amount": "100000.00",
+      "qr_url": "https://img.vietqr.io/image/970422-0888999777-compact2.png?amount=100000&addInfo=TT%20ORD1014",
+      "status": "PaymentRequestStatus.FULFILLED"
+    },
+    {
+      "id": 22,
+      "order_id": 17,
+      "request_code": "REQ_ORD1015_C37F",
+      "expected_amount": "200000.00",
+      "qr_url": "https://img.vietqr.io/image/970422-0888999777-compact2.png?amount=200000&addInfo=TT%20ORD1015",
+      "status": "PaymentRequestStatus.FULFILLED"
+    },
+    {
+      "id": 23,
+      "order_id": 18,
+      "request_code": "REQ_ORD1016_6FAE",
+      "expected_amount": "200000.00",
+      "qr_url": "https://img.vietqr.io/image/970422-0888999777-compact2.png?amount=200000&addInfo=TT%20ORD1016",
+      "status": "PaymentRequestStatus.FULFILLED"
+    }
+  ],
+  "bank_transactions": [
+    {
+      "id": 1,
+      "merchant_id": 1,
+      "reference_code": "FT2629929368",
+      "amount": "186000.00",
+      "allocated_amount": "186000.00",
+      "unallocated_amount": "0.00",
+      "transfer_content": "TT ORD1001",
+      "match_status": "MatchStatus.FULLY_ALLOCATED",
+      "created_at": "2026-10-24T20:20:29.773000"
+    },
+    {
+      "id": 2,
+      "merchant_id": 1,
+      "reference_code": "FT2629877459",
+      "amount": "200000.00",
+      "allocated_amount": "200000.00",
+      "unallocated_amount": "0.00",
+      "transfer_content": "TT ORD1002",
+      "match_status": "MatchStatus.FULLY_ALLOCATED",
+      "created_at": "2026-10-24T20:40:35.512000"
+    },
+    {
+      "id": 3,
+      "merchant_id": 1,
+      "reference_code": "FT2629251612",
+      "amount": "46200.00",
+      "allocated_amount": "46200.00",
+      "unallocated_amount": "0.00",
+      "transfer_content": "TT ORD1003",
+      "match_status": "MatchStatus.FULLY_ALLOCATED",
+      "created_at": "2026-10-24T20:43:39.645000"
+    },
+    {
+      "id": 4,
+      "merchant_id": 1,
+      "reference_code": "FT2629425209",
+      "amount": "200000.00",
+      "allocated_amount": "200000.00",
+      "unallocated_amount": "0.00",
+      "transfer_content": "TT ORD1004",
+      "match_status": "MatchStatus.FULLY_ALLOCATED",
+      "created_at": "2026-10-24T20:43:53.603000"
+    },
+    {
+      "id": 5,
+      "merchant_id": 1,
+      "reference_code": "FT2629186255",
+      "amount": "200000.00",
+      "allocated_amount": "200000.00",
+      "unallocated_amount": "0.00",
+      "transfer_content": "TT ORD1005",
+      "match_status": "MatchStatus.FULLY_ALLOCATED",
+      "created_at": "2026-10-24T20:44:13.252000"
+    },
+    {
+      "id": 6,
+      "merchant_id": 1,
+      "reference_code": "FT2629233271",
+      "amount": "200000.00",
+      "allocated_amount": "200000.00",
+      "unallocated_amount": "0.00",
+      "transfer_content": "TT ORD1006",
+      "match_status": "MatchStatus.FULLY_ALLOCATED",
+      "created_at": "2026-10-24T20:44:34.445000"
+    },
+    {
+      "id": 7,
+      "merchant_id": 1,
+      "reference_code": "FT2629968623",
+      "amount": "200000.00",
+      "allocated_amount": "200000.00",
+      "unallocated_amount": "0.00",
+      "transfer_content": "TT ORD1007",
+      "match_status": "MatchStatus.FULLY_ALLOCATED",
+      "created_at": "2026-10-24T20:46:11.660000"
+    },
+    {
+      "id": 8,
+      "merchant_id": 1,
+      "reference_code": "FT2629157338",
+      "amount": "120000.00",
+      "allocated_amount": "120000.00",
+      "unallocated_amount": "0.00",
+      "transfer_content": "TT ORD1008",
+      "match_status": "MatchStatus.FULLY_ALLOCATED",
+      "created_at": "2026-10-24T20:52:06.219000"
+    },
+    {
+      "id": 9,
+      "merchant_id": 1,
+      "reference_code": "FT2629111385",
+      "amount": "200000.00",
+      "allocated_amount": "80000.00",
+      "unallocated_amount": "120000.00",
+      "transfer_content": "TT ORD1008",
+      "match_status": "MatchStatus.PARTIALLY_ALLOCATED",
+      "created_at": "2026-10-24T20:52:19.306000"
+    },
+    {
+      "id": 10,
+      "merchant_id": 1,
+      "reference_code": "FT2629303002",
+      "amount": "200000.00",
+      "allocated_amount": "0.00",
+      "unallocated_amount": "200000.00",
+      "transfer_content": "KHACH CHUYEN TIEN QUEN GHI MA DON",
+      "match_status": "MatchStatus.UNMATCHED",
+      "created_at": "2026-10-24T21:11:32.068000"
+    },
+    {
+      "id": 11,
+      "merchant_id": 1,
+      "reference_code": "FT2629664066",
+      "amount": "200000.00",
+      "allocated_amount": "200000.00",
+      "unallocated_amount": "0.00",
+      "transfer_content": "TT ORD1009",
+      "match_status": "MatchStatus.FULLY_ALLOCATED",
+      "created_at": "2026-10-24T21:11:50.461000"
+    },
+    {
+      "id": 12,
+      "merchant_id": 1,
+      "reference_code": "FT2629704671",
+      "amount": "120000.00",
+      "allocated_amount": "120000.00",
+      "unallocated_amount": "0.00",
+      "transfer_content": "TT ORD1010",
+      "match_status": "MatchStatus.FULLY_ALLOCATED",
+      "created_at": "2026-10-24T21:12:52.650000"
+    },
+    {
+      "id": 13,
+      "merchant_id": 1,
+      "reference_code": "FT2629577662",
+      "amount": "200000.00",
+      "allocated_amount": "80000.00",
+      "unallocated_amount": "120000.00",
+      "transfer_content": "TT ORD1010",
+      "match_status": "MatchStatus.PARTIALLY_ALLOCATED",
+      "created_at": "2026-10-24T21:13:11.137000"
+    },
+    {
+      "id": 14,
+      "merchant_id": 1,
+      "reference_code": "FT2629357207",
+      "amount": "200000.00",
+      "allocated_amount": "200000.00",
+      "unallocated_amount": "0.00",
+      "transfer_content": "TT ORD1011",
+      "match_status": "MatchStatus.FULLY_ALLOCATED",
+      "created_at": "2026-10-24T21:13:31.294000"
+    },
+    {
+      "id": 15,
+      "merchant_id": 1,
+      "reference_code": "FT2629526729",
+      "amount": "120000.00",
+      "allocated_amount": "120000.00",
+      "unallocated_amount": "0.00",
+      "transfer_content": "TT ORD1012",
+      "match_status": "MatchStatus.FULLY_ALLOCATED",
+      "created_at": "2026-10-24T21:13:39.040000"
+    },
+    {
+      "id": 20,
+      "merchant_id": 1,
+      "reference_code": "FT2629823637",
+      "amount": "80000.00",
+      "allocated_amount": "80000.00",
+      "unallocated_amount": "0.00",
+      "transfer_content": "TT ORD1012",
+      "match_status": "MatchStatus.FULLY_ALLOCATED",
+      "created_at": "2026-10-24T21:28:24.026000"
+    },
+    {
+      "id": 21,
+      "merchant_id": 1,
+      "reference_code": "FT2629747632",
+      "amount": "263000.00",
+      "allocated_amount": "263000.00",
+      "unallocated_amount": "0.00",
+      "transfer_content": "TT ORD1013",
+      "match_status": "MatchStatus.FULLY_ALLOCATED",
+      "created_at": "2026-10-24T21:29:16.184000"
+    },
+    {
+      "id": 22,
+      "merchant_id": 1,
+      "reference_code": "FT2629530556",
+      "amount": "100000.00",
+      "allocated_amount": "100000.00",
+      "unallocated_amount": "0.00",
+      "transfer_content": "TT ORD1014",
+      "match_status": "MatchStatus.FULLY_ALLOCATED",
+      "created_at": "2026-10-24T21:30:10.451000"
+    },
+    {
+      "id": 23,
+      "merchant_id": 1,
+      "reference_code": "FT2629254490",
+      "amount": "100000.00",
+      "allocated_amount": "100000.00",
+      "unallocated_amount": "0.00",
+      "transfer_content": "TT ORD1014",
+      "match_status": "MatchStatus.FULLY_ALLOCATED",
+      "created_at": "2026-10-24T21:30:28.091000"
+    },
+    {
+      "id": 24,
+      "merchant_id": 1,
+      "reference_code": "FT2629677303",
+      "amount": "250000.00",
+      "allocated_amount": "200000.00",
+      "unallocated_amount": "50000.00",
+      "transfer_content": "TT ORD1015",
+      "match_status": "MatchStatus.PARTIALLY_ALLOCATED",
+      "created_at": "2026-10-24T21:30:39.503000"
+    },
+    {
+      "id": 25,
+      "merchant_id": 1,
+      "reference_code": "FT2629874943",
+      "amount": "200000.00",
+      "allocated_amount": "200000.00",
+      "unallocated_amount": "0.00",
+      "transfer_content": "KHACH CHUYEN TIEN QUEN GHI MA DON",
+      "match_status": "MatchStatus.FULLY_ALLOCATED",
+      "created_at": "2026-10-24T21:31:18.295000"
+    }
+  ],
+  "payment_allocations": [
+    {
+      "id": 1,
+      "bank_transaction_id": 1,
+      "payment_request_id": 1,
+      "order_id": 1,
+      "entry_type": "EntryType.ALLOCATION",
+      "allocated_amount": "186000.00",
+      "record_hash": "dcaa3897d7c9cff0ca183a37a3f88f86076437c7002f91a7e4c0e3a2428cb827",
+      "prev_hash": "GENESIS_00000000000000000000000000000000000000000000000000000000",
+      "created_at": "2026-10-24T20:20:29"
+    },
+    {
+      "id": 2,
+      "bank_transaction_id": 2,
+      "payment_request_id": 2,
+      "order_id": 2,
+      "entry_type": "EntryType.ALLOCATION",
+      "allocated_amount": "200000.00",
+      "record_hash": "d243d438065eb2757e6e2fbba0fd41685f6ebb91ab879f216c782edeb9f658b7",
+      "prev_hash": "dcaa3897d7c9cff0ca183a37a3f88f86076437c7002f91a7e4c0e3a2428cb827",
+      "created_at": "2026-10-24T20:40:35"
+    },
+    {
+      "id": 3,
+      "bank_transaction_id": 3,
+      "payment_request_id": 3,
+      "order_id": 3,
+      "entry_type": "EntryType.ALLOCATION",
+      "allocated_amount": "46200.00",
+      "record_hash": "520563560872f17e0cda0e781e271d87cddb89acf05e51d3a105d22b57da0e62",
+      "prev_hash": "d243d438065eb2757e6e2fbba0fd41685f6ebb91ab879f216c782edeb9f658b7",
+      "created_at": "2026-10-24T20:43:39"
+    },
+    {
+      "id": 4,
+      "bank_transaction_id": 4,
+      "payment_request_id": 4,
+      "order_id": 4,
+      "entry_type": "EntryType.ALLOCATION",
+      "allocated_amount": "200000.00",
+      "record_hash": "694ee06f6e92616c816a95485dff469ac15560821ed1b244eb23a5a1537bc697",
+      "prev_hash": "520563560872f17e0cda0e781e271d87cddb89acf05e51d3a105d22b57da0e62",
+      "created_at": "2026-10-24T20:43:53"
+    },
+    {
+      "id": 5,
+      "bank_transaction_id": 5,
+      "payment_request_id": 5,
+      "order_id": 5,
+      "entry_type": "EntryType.ALLOCATION",
+      "allocated_amount": "200000.00",
+      "record_hash": "86635ee1dca54339970820b6e06e70cf8adced870e2cbcc53f7b8041e4475ce3",
+      "prev_hash": "694ee06f6e92616c816a95485dff469ac15560821ed1b244eb23a5a1537bc697",
+      "created_at": "2026-10-24T20:44:13"
+    },
+    {
+      "id": 6,
+      "bank_transaction_id": 6,
+      "payment_request_id": 6,
+      "order_id": 6,
+      "entry_type": "EntryType.ALLOCATION",
+      "allocated_amount": "200000.00",
+      "record_hash": "2ee23d33dadb034871ba1050dc4425d10df48a0bef63cb451a52172cf93a6099",
+      "prev_hash": "86635ee1dca54339970820b6e06e70cf8adced870e2cbcc53f7b8041e4475ce3",
+      "created_at": "2026-10-24T20:44:34"
+    },
+    {
+      "id": 7,
+      "bank_transaction_id": 7,
+      "payment_request_id": 7,
+      "order_id": 7,
+      "entry_type": "EntryType.ALLOCATION",
+      "allocated_amount": "200000.00",
+      "record_hash": "656c94b815afa01974809613a279761eb7f0636910dd6964e47cfbb9acff1ba2",
+      "prev_hash": "2ee23d33dadb034871ba1050dc4425d10df48a0bef63cb451a52172cf93a6099",
+      "created_at": "2026-10-24T20:46:11"
+    },
+    {
+      "id": 8,
+      "bank_transaction_id": 8,
+      "payment_request_id": 8,
+      "order_id": 8,
+      "entry_type": "EntryType.ALLOCATION",
+      "allocated_amount": "120000.00",
+      "record_hash": "efe43c1035c6c6653b04f5a340a44e4c31d3e92b0cb833bc970ea879abf69173",
+      "prev_hash": "656c94b815afa01974809613a279761eb7f0636910dd6964e47cfbb9acff1ba2",
+      "created_at": "2026-10-24T20:52:06"
+    },
+    {
+      "id": 9,
+      "bank_transaction_id": 9,
+      "payment_request_id": 8,
+      "order_id": 8,
+      "entry_type": "EntryType.ALLOCATION",
+      "allocated_amount": "80000.00",
+      "record_hash": "b29a508a738a7a49eb9a27c9f12677fe6b4b46a32e31ec528fd4a40919127d98",
+      "prev_hash": "efe43c1035c6c6653b04f5a340a44e4c31d3e92b0cb833bc970ea879abf69173",
+      "created_at": "2026-10-24T20:52:19"
+    },
+    {
+      "id": 10,
+      "bank_transaction_id": 11,
+      "payment_request_id": 9,
+      "order_id": 9,
+      "entry_type": "EntryType.ALLOCATION",
+      "allocated_amount": "200000.00",
+      "record_hash": "f094ec512c3292b72fddbdaee1808587edab8883279b6fa2f3f288056d093f2b",
+      "prev_hash": "b29a508a738a7a49eb9a27c9f12677fe6b4b46a32e31ec528fd4a40919127d98",
+      "created_at": "2026-10-24T21:11:50"
+    },
+    {
+      "id": 11,
+      "bank_transaction_id": 12,
+      "payment_request_id": 10,
+      "order_id": 10,
+      "entry_type": "EntryType.ALLOCATION",
+      "allocated_amount": "120000.00",
+      "record_hash": "1127f1fed8e415394500c611addd3d6c6106bd1a32aac8a205b4f47e7bec2318",
+      "prev_hash": "f094ec512c3292b72fddbdaee1808587edab8883279b6fa2f3f288056d093f2b",
+      "created_at": "2026-10-24T21:12:52"
+    },
+    {
+      "id": 12,
+      "bank_transaction_id": 13,
+      "payment_request_id": 10,
+      "order_id": 10,
+      "entry_type": "EntryType.ALLOCATION",
+      "allocated_amount": "80000.00",
+      "record_hash": "abdc1a4688da3442ae9c47853f955195ad9d46dbd68c99c0a0649294d7b78d25",
+      "prev_hash": "1127f1fed8e415394500c611addd3d6c6106bd1a32aac8a205b4f47e7bec2318",
+      "created_at": "2026-10-24T21:13:11"
+    },
+    {
+      "id": 13,
+      "bank_transaction_id": 14,
+      "payment_request_id": 11,
+      "order_id": 11,
+      "entry_type": "EntryType.ALLOCATION",
+      "allocated_amount": "200000.00",
+      "record_hash": "d15c95e09f101923bd0d57aad8fd4a5bab6e76a750276923c83df481a4aca1ce",
+      "prev_hash": "abdc1a4688da3442ae9c47853f955195ad9d46dbd68c99c0a0649294d7b78d25",
+      "created_at": "2026-10-24T21:13:31"
+    },
+    {
+      "id": 14,
+      "bank_transaction_id": 15,
+      "payment_request_id": 12,
+      "order_id": 12,
+      "entry_type": "EntryType.ALLOCATION",
+      "allocated_amount": "120000.00",
+      "record_hash": "a167982fa0ca41fb7a0be10eedf81b27a5fbb28bf993a5c62934b52be82ebc0a",
+      "prev_hash": "d15c95e09f101923bd0d57aad8fd4a5bab6e76a750276923c83df481a4aca1ce",
+      "created_at": "2026-10-24T21:13:39"
+    },
+    {
+      "id": 19,
+      "bank_transaction_id": 20,
+      "payment_request_id": 12,
+      "order_id": 12,
+      "entry_type": "EntryType.ALLOCATION",
+      "allocated_amount": "80000.00",
+      "record_hash": "61c6ec77776eac684909d347c590deef4984598fe384f4cf83a5c3b4976ea7f6",
+      "prev_hash": "a167982fa0ca41fb7a0be10eedf81b27a5fbb28bf993a5c62934b52be82ebc0a",
+      "created_at": "2026-10-24T21:28:24"
+    },
+    {
+      "id": 20,
+      "bank_transaction_id": 21,
+      "payment_request_id": 13,
+      "order_id": 13,
+      "entry_type": "EntryType.ALLOCATION",
+      "allocated_amount": "263000.00",
+      "record_hash": "b56177e2ea4961fec1762b9b4928135b22e78728005ee00b651f96a65d369352",
+      "prev_hash": "61c6ec77776eac684909d347c590deef4984598fe384f4cf83a5c3b4976ea7f6",
+      "created_at": "2026-10-24T21:29:16"
+    },
+    {
+      "id": 21,
+      "bank_transaction_id": 22,
+      "payment_request_id": 20,
+      "order_id": 16,
+      "entry_type": "EntryType.ALLOCATION",
+      "allocated_amount": "100000.00",
+      "record_hash": "74e76bc6bff03a19e75b6effa882d4eb315437a13ba473864190b246fd208b9a",
+      "prev_hash": "b56177e2ea4961fec1762b9b4928135b22e78728005ee00b651f96a65d369352",
+      "created_at": "2026-10-24T21:30:10"
+    },
+    {
+      "id": 22,
+      "bank_transaction_id": 23,
+      "payment_request_id": 21,
+      "order_id": 16,
+      "entry_type": "EntryType.ALLOCATION",
+      "allocated_amount": "100000.00",
+      "record_hash": "18e2ea159ed1c15d80b85528e6e92d126862afbd7a8a3bf21084658176bfd01c",
+      "prev_hash": "74e76bc6bff03a19e75b6effa882d4eb315437a13ba473864190b246fd208b9a",
+      "created_at": "2026-10-24T21:30:28"
+    },
+    {
+      "id": 23,
+      "bank_transaction_id": 24,
+      "payment_request_id": 22,
+      "order_id": 17,
+      "entry_type": "EntryType.ALLOCATION",
+      "allocated_amount": "200000.00",
+      "record_hash": "6436c94968d792ba9d886422bd245a098c8ce07474b99a70f1ec9a4cc586cbc7",
+      "prev_hash": "18e2ea159ed1c15d80b85528e6e92d126862afbd7a8a3bf21084658176bfd01c",
+      "created_at": "2026-10-24T21:30:39"
+    },
+    {
+      "id": 24,
+      "bank_transaction_id": 25,
+      "payment_request_id": 23,
+      "order_id": 18,
+      "entry_type": "EntryType.ALLOCATION",
+      "allocated_amount": "200000.00",
+      "record_hash": "fc535022e730aa55ae26f59832e900113d7a19ee64c2414c42452a2c6e54d5f7",
+      "prev_hash": "6436c94968d792ba9d886422bd245a098c8ce07474b99a70f1ec9a4cc586cbc7",
+      "created_at": "2026-10-24T21:32:31"
+    }
+  ],
+  "decisions": [
+    {
+      "id": 1,
+      "order_id": 18,
+      "bank_transaction_id": 25,
+      "reviewer_id": 3,
+      "decision_type": "DecisionType.APPROVE_MANUAL_MATCH",
+      "reason": "Khách hàng xác nhận chuyển khoản thanh toán cho hóa đơn nhưng quên ghi mã đơn.",
+      "created_at": "2026-10-24T21:32:31.337683"
+    },
+    {
+      "id": 2,
+      "order_id": 8,
+      "bank_transaction_id": 9,
+      "reviewer_id": 3,
+      "decision_type": "DecisionType.OVERPAYMENT_RESOLUTION",
+      "reason": "Đã ck trả khách",
+      "created_at": "2026-10-24T15:31:17.840200"
+    },
+    {
+      "id": 3,
+      "order_id": 10,
+      "bank_transaction_id": 13,
+      "reviewer_id": 2,
+      "decision_type": "DecisionType.OVERPAYMENT_RESOLUTION",
+      "reason": "đã ck trả khách",
+      "created_at": "2026-10-24T15:32:49.258849"
+    },
+    {
+      "id": 4,
+      "order_id": 17,
+      "bank_transaction_id": 24,
+      "reviewer_id": 3,
+      "decision_type": "DecisionType.OVERPAYMENT_RESOLUTION",
+      "reason": "đã ck trả khách",
+      "created_at": "2026-10-24T15:37:19.496913"
+    },
+    {
+      "id": 8,
+      "order_id": 18,
+      "bank_transaction_id": 10,
+      "reviewer_id": 3,
+      "decision_type": "DecisionType.OVERPAYMENT_RESOLUTION",
+      "reason": "Khách hàng đã chuyển lại thanh toán đơn ORD1016, khoản chuyển sai nội dung này đã được xử lý hoàn trả tiền thừa cho khách.",
+      "created_at": "2026-10-24T15:51:29.167917"
+    }
+  ],
+  "shift_audits": []
+}

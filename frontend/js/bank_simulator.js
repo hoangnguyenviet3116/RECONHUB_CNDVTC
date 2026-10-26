@@ -1,12 +1,42 @@
 // ==========================================================================
 // CỔNG THANH TOÁN NGÂN HÀNG MÔ PHỎNG (frontend/js/bank_simulator.js)
+// Chỉ hiển thị khi bấm "Thanh toán đơn này" từ hóa đơn và tự động quay về trang trước
 // ==========================================================================
 
 let bankTxCache = [];
 let simOrdersCache = [];
 let isTriggeringTransfer = false;
 
+function getReturnUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const returnUrl = params.get("return_url");
+    if (returnUrl) return returnUrl;
+    if (document.referrer && document.referrer.includes(".html") && !document.referrer.includes("bank-simulator.html")) {
+        return document.referrer;
+    }
+    return "pos.html";
+}
+
+function redirectBackToPreviousPage(delayMs = 1200) {
+    const targetUrl = getReturnUrl();
+    setTimeout(() => {
+        window.location.href = targetUrl;
+    }, delayMs);
+}
+
 function initBankSimulatorPage() {
+    const params = new URLSearchParams(window.location.search);
+    const orderCode = params.get("order_code");
+
+    // Chỉ cho phép mở trang Cổng thanh toán khi người dùng bấm "Thanh toán đơn này" từ một hóa đơn
+    if (!orderCode) {
+        showToast("Vui lòng chọn hóa đơn và bấm 'Thanh toán đơn này' tại Quầy thu ngân.", "warning");
+        setTimeout(() => {
+            window.location.replace("pos.html");
+        }, 600);
+        return;
+    }
+
     generateFreshReferenceCode();
     bindSimulatorEvents();
     loadOrdersForSimulatorSelect().then(() => {
@@ -89,21 +119,29 @@ function applyTestScenarioPreset(scenarioKey) {
     const modeSelect = document.getElementById("sim-test-mode");
     const orderSelect = document.getElementById("sim-order-select");
 
-    const selectedCode = orderSelect?.value;
+    const params = new URLSearchParams(window.location.search);
+    const urlOrderCode = params.get("order_code")?.trim().toUpperCase();
+    const selectedCode = orderSelect?.value || urlOrderCode;
+
+    const validOrders = simOrdersCache.filter(
+        (o) => String(o.order_status).toUpperCase() !== "CANCELLED_ORDER"
+    );
     const targetOrder =
         simOrdersCache.find((o) => o.order_code === selectedCode) ||
-        simOrdersCache.find((o) => String(o.payment_status).toUpperCase() !== "PAID") ||
-        { order_code: "ORD1003", total_amount: 15000000, net_paid_amount: 0 };
+        validOrders.find((o) => String(o.payment_status).toUpperCase() !== "PAID") ||
+        (validOrders.length > 0 ? validOrders[0] : null);
 
-    if (orderSelect && targetOrder.order_code) {
+    if (targetOrder && orderSelect && targetOrder.order_code) {
         orderSelect.value = targetOrder.order_code;
     }
 
-    const remaining = Math.max(
-        0,
-        Number(targetOrder.total_amount || 15000000) - Number(targetOrder.net_paid_amount || 0)
-    );
-    const baseAmount = remaining > 0 ? remaining : Number(targetOrder.total_amount || 200000);
+    const targetCode = targetOrder?.order_code || urlOrderCode || "ORD1001";
+    const remaining = targetOrder
+        ? Math.max(0, Number(targetOrder.total_amount || 0) - Number(targetOrder.net_paid_amount || 0))
+        : 0;
+    const baseAmount = targetOrder
+        ? (remaining > 0 ? remaining : Number(targetOrder.total_amount || 200000))
+        : Number(params.get("amount") || 200000);
 
     generateFreshReferenceCode();
     if (modeSelect) modeSelect.value = "STANDARD";
@@ -111,15 +149,15 @@ function applyTestScenarioPreset(scenarioKey) {
     switch (scenarioKey) {
         case "TC02_EXACT":
             if (amountInput) amountInput.value = String(baseAmount);
-            if (contentInput) contentInput.value = `TT ${targetOrder.order_code}`;
+            if (contentInput) contentInput.value = `TT ${targetCode}`;
             break;
         case "TC03_PARTIAL":
             if (amountInput) amountInput.value = String(Math.max(10000, Math.round(baseAmount * 0.6)));
-            if (contentInput) contentInput.value = `TT ${targetOrder.order_code}`;
+            if (contentInput) contentInput.value = `TT ${targetCode}`;
             break;
         case "TC04_OVERPAID":
             if (amountInput) amountInput.value = String(baseAmount + 50000);
-            if (contentInput) contentInput.value = `TT ${targetOrder.order_code}`;
+            if (contentInput) contentInput.value = `TT ${targetCode}`;
             break;
         case "TC05_WRONG_CODE":
             if (amountInput) amountInput.value = String(baseAmount);
@@ -141,8 +179,12 @@ async function loadOrdersForSimulatorSelect() {
         simOrdersCache = getDemoStore().orders || [];
     }
 
-    const unpaidOrders = simOrdersCache.filter((o) => String(o.payment_status).toUpperCase() !== "PAID");
-    const listToShow = unpaidOrders.length > 0 ? unpaidOrders : simOrdersCache;
+    const unpaidValidOrders = simOrdersCache.filter(
+        (o) =>
+            String(o.payment_status).toUpperCase() !== "PAID" &&
+            String(o.order_status).toUpperCase() !== "CANCELLED_ORDER"
+    );
+    const listToShow = unpaidValidOrders.length > 0 ? unpaidValidOrders : simOrdersCache;
 
     const optionsHtml = listToShow
         .map((o) => {
@@ -157,13 +199,6 @@ async function loadOrdersForSimulatorSelect() {
         .join("");
 
     selectEl.innerHTML = `<option value="">-- Tự nhập thông tin chuyển khoản --</option>` + optionsHtml;
-
-    if (unpaidOrders.length > 0 && !selectEl.value) {
-        selectEl.value = unpaidOrders[0].order_code;
-        const rem = Math.max(0, Number(unpaidOrders[0].total_amount || 0) - Number(unpaidOrders[0].net_paid_amount || 0));
-        document.getElementById("sim-transfer-content").value = `TT ${unpaidOrders[0].order_code}`;
-        document.getElementById("sim-amount").value = String(rem > 0 ? rem : unpaidOrders[0].total_amount);
-    }
 }
 
 async function loadBankTransactionsList(showNotification = false) {
@@ -268,13 +303,18 @@ async function handleTriggerTransferSubmit(event) {
         submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Đang xử lý...`;
     }
 
+    const transferTime = new Date();
     const basePayload = {
         merchant_id: getCurrentMerchantId(),
         reference_code: referenceCode,
         amount: amount,
         transfer_content: transferContent,
+        transfer_time: transferTime.toISOString(),
+        transaction_date: transferTime.toISOString(),
         tamper_signature: testMode === "INVALID_HMAC",
-        simulate_invalid_hmac: testMode === "INVALID_HMAC"
+        simulate_invalid_hmac: testMode === "INVALID_HMAC",
+        test_mode: testMode,
+        simulate_replay_attack: testMode === "REPLAY_ATTACK"
     };
 
     try {
@@ -290,7 +330,8 @@ async function handleTriggerTransferSubmit(event) {
                 message: `Giao dịch ${referenceCode} bị gửi lặp 2 lần nhưng hệ thống chỉ ghi nhận đúng 1 lần duy nhất.`,
                 referenceCode,
                 amount,
-                transferContent
+                transferContent,
+                transferTime
             });
         } else {
             const response = await apiRequest("/mock-bank/trigger-transfer", {
@@ -301,19 +342,25 @@ async function handleTriggerTransferSubmit(event) {
                 badgeText: "Thành công",
                 isSuccess: true,
                 title: "Chuyển khoản thành công",
-                message: response.message || "Đã tiếp nhận khoản chuyển khoản và tự động đối soát với hóa đơn.",
+                message: `${response.message || "Đã tiếp nhận khoản chuyển khoản và tự động đối soát."}`,
                 referenceCode,
                 amount,
-                transferContent
+                transferContent,
+                transferTime
             });
         }
 
-        generateFreshReferenceCode();
-        await loadBankTransactionsList(false);
-        await loadOrdersForSimulatorSelect();
+        // Lưu lại mã hóa đơn vừa chuyển khoản để trang Quầy thu ngân (pos.html) phát loa thông báo ngay khi quay về
+        const match = transferContent.toUpperCase().match(/ORD[A-Z0-9_-]*/);
+        if (match) {
+            sessionStorage.setItem("recon_just_paid_order", match[0]);
+        }
+
+        showToast("Chuyển khoản thành công!", "success");
+        redirectBackToPreviousPage(1200);
     } catch (error) {
         if (error.isNetworkError) {
-            executeStoreTransferSimulation(basePayload, testMode);
+            executeStoreTransferSimulation(basePayload, testMode, transferTime);
         } else {
             renderFriendlyReceipt({
                 badgeText: "Bị từ chối",
@@ -322,20 +369,20 @@ async function handleTriggerTransferSubmit(event) {
                 message: error.message || "Thông báo chuyển khoản không hợp lệ.",
                 referenceCode,
                 amount,
-                transferContent
+                transferContent,
+                transferTime
             });
             showToast(error.message, "danger");
-        }
-    } finally {
-        isTriggeringTransfer = false;
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = oldHtml;
+            isTriggeringTransfer = false;
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = oldHtml;
+            }
         }
     }
 }
 
-function executeStoreTransferSimulation(payload, testMode) {
+function executeStoreTransferSimulation(payload, testMode, transferTime = null) {
     if (testMode === "INVALID_HMAC") {
         renderFriendlyReceipt({
             badgeText: "Chặn bảo mật",
@@ -344,9 +391,11 @@ function executeStoreTransferSimulation(payload, testMode) {
             message: "Bản tin báo có không khớp chữ ký bảo mật của ngân hàng nên không được ghi nhận vào sổ quỹ.",
             referenceCode: payload.reference_code,
             amount: payload.amount,
-            transferContent: payload.transfer_content
+            transferContent: payload.transfer_content,
+            transferTime
         });
         showToast("Đã chặn bản tin sai chữ ký bảo mật!", "danger");
+        isTriggeringTransfer = false;
         return;
     }
 
@@ -361,13 +410,15 @@ function executeStoreTransferSimulation(payload, testMode) {
             message: `Mã giao dịch ${payload.reference_code} đã tồn tại trong sổ quỹ, hệ thống từ chối cộng tiền lần 2.`,
             referenceCode: payload.reference_code,
             amount: payload.amount,
-            transferContent: payload.transfer_content
+            transferContent: payload.transfer_content,
+            transferTime
         });
         showToast("Đã chặn mã giao dịch trùng lặp!", "warning");
+        isTriggeringTransfer = false;
         return;
     }
 
-    const match = payload.transfer_content.toUpperCase().match(/ORD\d+/);
+    const match = payload.transfer_content.toUpperCase().match(/ORD[A-Z0-9_-]*/);
     const matchedCode = match ? match[0] : null;
     const matchedOrder = matchedCode ? store.orders.find((o) => o.order_code === matchedCode) : null;
 
@@ -375,8 +426,7 @@ function executeStoreTransferSimulation(payload, testMode) {
     let unallocated = payload.amount;
     let matchStatus = "UNMATCHED";
     let title = "Khoản tiền đã chuyển sang mục Đối soát lệch";
-    let message = "Không tìm thấy mã hóa đơn hợp lệ trong nội dung chuyển khoản. Kế toán có thể ghép thủ công ở mục Đối soát lệch.";
-    let nextLinkHtml = `<a href="reconciliation.html" class="btn-fp-dark py-1 px-3 mt-2" style="font-size:0.8rem;">Mở trang Đối soát lệch để ghép đơn →</a>`;
+    let message = "Không tìm thấy mã hóa đơn hợp lệ.";
 
     if (matchedOrder && String(matchedOrder.payment_status).toUpperCase() !== "PAID") {
         const orderRem = Math.max(
@@ -396,7 +446,6 @@ function executeStoreTransferSimulation(payload, testMode) {
             matchedOrder.qr_request.status = "FULFILLED";
         }
 
-        // Ghi bút toán vào sổ cái chuỗi băm
         const prevHash =
             store.allocations.length > 0
                 ? store.allocations[store.allocations.length - 1].record_hash
@@ -416,22 +465,13 @@ function executeStoreTransferSimulation(payload, testMode) {
             allocation_mode: "AUTO",
             prev_hash: prevHash,
             record_hash: `a8f5e2c9d1b40768f12e34a56b78c90d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a${allocId}`,
-            created_at: new Date().toISOString(),
+            created_at: (transferTime || new Date()).toISOString(),
             is_valid: true
         });
 
-        if (unallocated > 0) {
-            title = `Hóa đơn ${matchedOrder.order_code} đã thu đủ & tách riêng ${formatVND(unallocated)} tiền thừa`;
-            message = `Hệ thống chỉ gạch nợ đúng ${formatVND(allocated)} cho hóa đơn ${matchedOrder.order_code}. Phần tiền thừa ${formatVND(unallocated)} được giữ lại để xử lý.`;
-        } else if (matchedOrder.payment_status === "PAID") {
-            title = `Hóa đơn ${matchedOrder.order_code} đã thanh toán hoàn tất!`;
-            message = `Đã khớp tự động ${formatVND(allocated)} vào hóa đơn ${matchedOrder.order_code}.`;
-        } else {
-            const stillMissing = Math.max(0, matchedOrder.total_amount - matchedOrder.net_paid_amount);
-            title = `Hóa đơn ${matchedOrder.order_code} vừa nhận ${formatVND(allocated)}`;
-            message = `Khách chuyển thiếu. Hóa đơn còn cần thu thêm ${formatVND(stillMissing)}.`;
-        }
-        nextLinkHtml = `<a href="pos.html" class="btn-fp-outline py-1 px-3 mt-2" style="font-size:0.8rem;">← Quay lại Quầy thu ngân</a>`;
+        sessionStorage.setItem("recon_just_paid_order", matchedOrder.order_code);
+        title = `Hóa đơn ${matchedOrder.order_code} đã ghi nhận thanh toán!`;
+        message = `Đã đối soát ${formatVND(allocated)} cho hóa đơn ${matchedOrder.order_code}.`;
     }
 
     const newTx = {
@@ -443,16 +483,11 @@ function executeStoreTransferSimulation(payload, testMode) {
         unallocated_amount: unallocated,
         transfer_content: payload.transfer_content,
         match_status: matchStatus,
-        created_at: new Date().toISOString()
+        created_at: (transferTime || new Date()).toISOString()
     };
 
     store.bank_transactions.unshift(newTx);
     saveDemoStore(store);
-
-    bankTxCache = store.bank_transactions;
-    simOrdersCache = store.orders;
-    renderBankTransactionsTable(bankTxCache);
-    loadOrdersForSimulatorSelect();
 
     renderFriendlyReceipt({
         badgeText: matchStatus === "UNMATCHED" ? "Chờ ghép đơn" : "Đã đối soát",
@@ -464,11 +499,11 @@ function executeStoreTransferSimulation(payload, testMode) {
         transferContent: payload.transfer_content,
         allocated,
         unallocated,
-        nextLinkHtml
+        transferTime
     });
 
-    generateFreshReferenceCode();
-    showToast(`Đã thực hiện chuyển khoản ${formatVND(payload.amount)}`, "success");
+    showToast("Chuyển khoản thành công!", "success");
+    redirectBackToPreviousPage(1200);
 }
 
 function renderFriendlyReceipt({
@@ -481,7 +516,8 @@ function renderFriendlyReceipt({
     transferContent,
     allocated,
     unallocated,
-    nextLinkHtml = ""
+    nextLinkHtml = "",
+    transferTime = null
 }) {
     const statusBadge = document.getElementById("inspector-http-status");
     const boxEl = document.getElementById("inspector-friendly-box");
@@ -506,6 +542,10 @@ function renderFriendlyReceipt({
         <div class="fw-bold ${isSuccess ? "text-success-emphasis" : "text-danger-emphasis"} mb-1">${escapeSimHtml(title)}</div>
         <div class="text-dark mb-2">${escapeSimHtml(message)}</div>
         <div class="p-2 px-3 rounded-3 bg-white border">
+            <div class="d-flex justify-content-between py-1 border-bottom">
+                <span class="text-secondary">Thời gian chuyển khoản:</span>
+                <strong class="font-numeric text-dark">${formatDateTime(transferTime || new Date())}</strong>
+            </div>
             <div class="d-flex justify-content-between py-1 border-bottom">
                 <span class="text-secondary">Mã GD:</span>
                 <strong class="font-numeric">${escapeSimHtml(referenceCode)}</strong>

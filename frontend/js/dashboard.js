@@ -5,7 +5,10 @@
 let barChartInstance = null;
 let doughnutChartInstance = null;
 let currentLedgerEntries = [];
+let originalLedgerEntriesBackup = [];
 let isTamperSimulationActive = false;
+let isDashboardShiftPopulated = false;
+let hasAppliedInitialUrlShift = false;
 
 function initDashboardPage() {
     bindDashboardEvents();
@@ -15,11 +18,15 @@ function initDashboardPage() {
 function bindDashboardEvents() {
     document.getElementById("btn-dash-refresh")?.addEventListener("click", () => {
         isTamperSimulationActive = false;
+        const btn = document.getElementById("btn-simulate-tamper-tc10");
+        if (btn) btn.textContent = "Giả lập sửa trộm dữ liệu";
         loadDashboardData(true);
     });
 
     document.getElementById("dash-shift-filter")?.addEventListener("change", () => {
         isTamperSimulationActive = false;
+        const btn = document.getElementById("btn-simulate-tamper-tc10");
+        if (btn) btn.textContent = "Giả lập sửa trộm dữ liệu";
         loadDashboardData(true);
     });
 
@@ -27,23 +34,76 @@ function bindDashboardEvents() {
     document.getElementById("btn-simulate-tamper-tc10")?.addEventListener("click", simulateTamperAttackTc10);
 }
 
+function updateDashboardShiftDropdown(shifts, currentShiftId) {
+    const filterEl = document.getElementById("dash-shift-filter");
+    if (!filterEl || !Array.isArray(shifts) || shifts.length === 0) return;
+
+    const curVal = filterEl.value;
+    if (!isDashboardShiftPopulated || filterEl.options.length <= 2) {
+        let html = '<option value="ALL">Tất cả ca bán hàng</option>';
+        shifts.forEach((s) => {
+            const statusLabel = String(s.status).toUpperCase() === "OPEN" ? "(Đang mở)" : "(Đã đóng)";
+            html += `<option value="${s.id}">Ca ${s.id}: ${escapeDashHtml(s.name)} ${statusLabel}</option>`;
+        });
+        filterEl.innerHTML = html;
+        isDashboardShiftPopulated = true;
+    }
+
+    if (currentShiftId !== undefined && currentShiftId !== null && Array.from(filterEl.options).some(o => o.value === String(currentShiftId))) {
+        filterEl.value = String(currentShiftId);
+    } else if (curVal && Array.from(filterEl.options).some(o => o.value === curVal)) {
+        filterEl.value = curVal;
+    }
+}
+
 async function loadDashboardData(showNotification = false) {
     let summaryData = null;
+    const urlParams = new URLSearchParams(window.location.search);
+    const preferredShiftId = urlParams.get("shift_id");
+    const filterEl = document.getElementById("dash-shift-filter");
+
+    let selectedShift = filterEl ? filterEl.value : "";
+    if (!hasAppliedInitialUrlShift && preferredShiftId) {
+        selectedShift = preferredShiftId;
+        hasAppliedInitialUrlShift = true;
+    }
+
+    const query = selectedShift ? `?shift_id=${encodeURIComponent(selectedShift)}` : "";
 
     try {
-        summaryData = await apiRequest("/dashboard/summary");
+        summaryData = await apiRequest(`/dashboard/summary${query}`);
     } catch (_) {
         const store = getDemoStore();
-        summaryData = computeStoreSummary(store);
+        summaryData = computeStoreSummary(store, selectedShift || "ALL");
+    }
+
+    if (summaryData.available_shifts && Array.isArray(summaryData.available_shifts)) {
+        const targetSelectVal =
+            String(selectedShift).toUpperCase() === "ALL"
+                ? "ALL"
+                : String(summaryData.shift_id ?? selectedShift ?? "ALL");
+        updateDashboardShiftDropdown(summaryData.available_shifts, targetSelectVal);
     }
 
     currentLedgerEntries = JSON.parse(JSON.stringify(summaryData.ledger_entries || []));
+    originalLedgerEntriesBackup = JSON.parse(JSON.stringify(currentLedgerEntries));
+
+    const isChainValid = Boolean(summaryData.ledger_integrity_valid ?? true);
+    isTamperSimulationActive = !isChainValid;
+    const tamperBtn = document.getElementById("btn-simulate-tamper-tc10");
+    if (tamperBtn) {
+        tamperBtn.textContent = isTamperSimulationActive ? "Khôi phục dữ liệu gốc" : "Giả lập sửa trộm dữ liệu";
+    }
+
+    const corruptedEntry = currentLedgerEntries.find((e) => e.is_valid === false);
+
     renderDashboardKpisAndTables(summaryData);
+    renderDashboardOrdersTable(summaryData.orders || []);
     renderDashboardCharts(summaryData);
     renderHashChainVerificationResult({
-        is_valid: true,
+        is_valid: isChainValid,
         total_records: currentLedgerEntries.length,
-        tampered_block_id: null,
+        tampered_block_id: corruptedEntry ? corruptedEntry.id : null,
         entries: currentLedgerEntries
     });
 
@@ -74,6 +134,21 @@ function renderDashboardKpisAndTables(data) {
     setText("kpi-unissued-qr-amount", formatVND(unissuedQr));
     setText("kpi-pending-qr-collection", formatVND(pendingQr));
     setText("kpi-remaining-receivable", formatVND(remaining));
+
+    const validCount = Number(data.valid_order_count ?? (data.orders ? data.orders.filter(o => o.order_status !== "CANCELLED_ORDER").length : 0));
+    setText("dash-valid-order-count", `${validCount} đơn`);
+
+    const cancelledTotal = Number(data.cancelled_order_total ?? 0);
+    const cancelledCount = Number(data.cancelled_order_count ?? (data.orders ? data.orders.filter(o => o.order_status === "CANCELLED_ORDER").length : 0));
+    const cancelledRow = document.getElementById("dash-cancelled-order-row");
+    if (cancelledRow) {
+        if (cancelledCount > 0 || cancelledTotal > 0) {
+            cancelledRow.classList.remove("d-none");
+            setText("dash-cancelled-order-total", `${formatVND(cancelledTotal)} (${cancelledCount} đơn)`);
+        } else {
+            cancelledRow.classList.add("d-none");
+        }
+    }
 
     const formulaTbody = document.getElementById("dash-reconciliation-formula-tbody");
     if (formulaTbody) {
@@ -280,6 +355,16 @@ function renderHashChainVerificationResult(result) {
     }
 
     if (!tbody) return;
+    if (entries.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center py-4 text-secondary">
+                    Chưa có bút toán nào trong sổ cái. Bút toán sẽ tự động hình thành khi có thanh toán thực tế trên web.
+                </td>
+            </tr>
+        `;
+        return;
+    }
     tbody.innerHTML = entries
         .map((item) => {
             const blockValid = item.is_valid !== false;
@@ -310,35 +395,66 @@ function renderHashChainVerificationResult(result) {
         .join("");
 }
 
-function simulateTamperAttackTc10() {
-    isTamperSimulationActive = !isTamperSimulationActive;
+async function simulateTamperAttackTc10() {
+    if (currentLedgerEntries.length === 0) {
+        showToast("Sổ cái chưa có bút toán nào để giả lập sửa trộm. Hãy thanh toán ít nhất 1 đơn hàng trước!", "warning");
+        return;
+    }
+
     const btn = document.getElementById("btn-simulate-tamper-tc10");
+    try {
+        const res = await apiRequest("/ledger/simulate-tamper", {
+            method: "POST"
+        });
+        const isValid = Boolean(res.is_valid ?? res.valid ?? true);
+        isTamperSimulationActive = !isValid;
+        const entries = res.entries || res.chain_details || currentLedgerEntries;
+        currentLedgerEntries = entries;
 
-    if (isTamperSimulationActive && currentLedgerEntries.length > 0) {
-        currentLedgerEntries[0].allocated_amount = 15000000;
-        currentLedgerEntries[0].is_valid = false;
-        if (currentLedgerEntries[1]) currentLedgerEntries[1].is_valid = false;
-        if (btn) btn.textContent = "Khôi phục dữ liệu gốc";
+        if (btn) {
+            btn.textContent = isTamperSimulationActive ? "Khôi phục dữ liệu gốc" : "Giả lập sửa trộm dữ liệu";
+        }
 
         renderHashChainVerificationResult({
-            is_valid: false,
-            total_records: currentLedgerEntries.length,
-            tampered_block_id: currentLedgerEntries[0].id,
-            entries: currentLedgerEntries
+            is_valid: isValid,
+            total_records: entries.length,
+            tampered_block_id: res.tampered_block_id || res.corrupted_record_id || (isValid ? null : entries[0]?.id),
+            entries
         });
-        showToast("Đã giả lập sửa số tiền Bút toán #1. Hệ thống lập tức báo động đỏ!", "danger");
-    } else {
-        const store = getDemoStore();
-        currentLedgerEntries = JSON.parse(JSON.stringify(store.allocations || []));
-        if (btn) btn.textContent = "Giả lập sửa trộm dữ liệu";
 
-        renderHashChainVerificationResult({
-            is_valid: true,
-            total_records: currentLedgerEntries.length,
-            tampered_block_id: null,
-            entries: currentLedgerEntries
-        });
-        showToast("Đã khôi phục dữ liệu sổ quỹ nguyên vẹn.", "success");
+        showToast(
+            isTamperSimulationActive
+                ? "Đã giả lập sửa số tiền Bút toán #1. Hệ thống lập tức báo động đỏ!"
+                : "Đã khôi phục dữ liệu sổ quỹ nguyên vẹn từ Server.",
+            isTamperSimulationActive ? "danger" : "success"
+        );
+    } catch (_) {
+        isTamperSimulationActive = !isTamperSimulationActive;
+        if (isTamperSimulationActive && currentLedgerEntries.length > 0) {
+            currentLedgerEntries[0].allocated_amount = Number(currentLedgerEntries[0].allocated_amount || 0) + 1000000;
+            currentLedgerEntries[0].is_valid = false;
+            if (currentLedgerEntries[1]) currentLedgerEntries[1].is_valid = false;
+            if (btn) btn.textContent = "Khôi phục dữ liệu gốc";
+
+            renderHashChainVerificationResult({
+                is_valid: false,
+                total_records: currentLedgerEntries.length,
+                tampered_block_id: currentLedgerEntries[0].id,
+                entries: currentLedgerEntries
+            });
+            showToast("Đã giả lập sửa số tiền Bút toán #1. Hệ thống lập tức báo động đỏ!", "danger");
+        } else {
+            currentLedgerEntries = JSON.parse(JSON.stringify(originalLedgerEntriesBackup));
+            if (btn) btn.textContent = "Giả lập sửa trộm dữ liệu";
+
+            renderHashChainVerificationResult({
+                is_valid: true,
+                total_records: currentLedgerEntries.length,
+                tampered_block_id: null,
+                entries: currentLedgerEntries
+            });
+            showToast("Đã khôi phục dữ liệu sổ quỹ nguyên vẹn.", "success");
+        }
     }
 }
 
@@ -353,4 +469,71 @@ function escapeDashHtml(str) {
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;");
+}
+
+function renderDashboardOrdersTable(orders) {
+    const tbody = document.getElementById("dash-orders-table-tbody");
+    const countBadge = document.getElementById("dash-orders-count-badge");
+    if (!tbody) return;
+
+    if (!orders || orders.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center py-4 text-secondary">
+                    Chưa có hóa đơn nào trong phạm vi ca được chọn.
+                </td>
+            </tr>
+        `;
+        if (countBadge) countBadge.textContent = "0 đơn";
+        return;
+    }
+
+    if (countBadge) countBadge.textContent = `${orders.length} đơn`;
+
+    tbody.innerHTML = orders
+        .map((ord) => {
+            const total = Number(ord.total_amount || 0);
+            const paid = Number(
+                ord.net_paid_amount ??
+                ord.allocated_amount ??
+                (String(ord.payment_status).toUpperCase() === "PAID" ? total : 0)
+            );
+            const remaining = Math.max(0, total - paid);
+            const isCancelled = String(ord.order_status).toUpperCase() === "CANCELLED_ORDER";
+
+            return `
+                <tr class="${isCancelled ? "table-light text-muted" : ""}">
+                    <td>
+                        <strong class="${isCancelled ? "text-muted text-decoration-line-through" : "text-dark"}">${escapeDashHtml(ord.order_code)}</strong>
+                        <div class="small text-secondary" style="font-size: 0.74rem;">${escapeDashHtml(ord.note || "—")}</div>
+                    </td>
+                    <td>
+                        <span class="badge bg-light text-secondary border">Ca ${ord.shift_id}</span>
+                    </td>
+                    <td class="text-end fw-bold font-numeric">
+                        ${isCancelled ? `<span class="text-decoration-line-through text-muted">${formatVND(total)}</span>` : formatVND(total)}
+                    </td>
+                    <td class="text-end font-numeric text-success fw-semibold">
+                        ${formatVND(paid)}
+                    </td>
+                    <td class="text-end font-numeric ${remaining > 0 && !isCancelled ? "text-warning fw-semibold" : "text-secondary"}">
+                        ${isCancelled ? "0 ₫" : formatVND(remaining)}
+                    </td>
+                    <td>
+                        ${renderStatusBadge(ord.order_status)}
+                    </td>
+                    <td>
+                        ${renderStatusBadge(ord.payment_status)}
+                    </td>
+                    <td>
+                        ${
+                            isCancelled
+                                ? `<span class="fp-badge fp-badge-danger" title="Hóa đơn đã hủy theo kế toán không hạch toán vào sổ quỹ thu tiền">✕ Loại trừ khỏi sổ quỹ</span>`
+                                : `<span class="fp-badge fp-badge-success" title="Tính 100% vào sổ quỹ">✓ Hạch toán sổ quỹ</span>`
+                        }
+                    </td>
+                </tr>
+            `;
+        })
+        .join("");
 }

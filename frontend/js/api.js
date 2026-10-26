@@ -3,185 +3,16 @@
 // ==========================================================================
 
 const API_BASE_URL = "http://localhost:8000";
-const DEMO_STORE_KEY = "reconhub_live_demo_store_v2";
+const DEMO_STORE_KEY = "reconhub_live_store_v3";
 
+// Khởi tạo trạng thái rỗng chuẩn: Dữ liệu chỉ hình thành từ hoạt động thực tế trên Web
 function getInitialDemoStore() {
     return {
-        shifts: [
-            {
-                id: 1,
-                merchant_id: 1,
-                name: "Ca sáng — 24/10/2026",
-                target_revenue: 120000000,
-                start_time: "2026-10-24T07:00:00",
-                end_time: "2026-10-24T15:00:00",
-                status: "OPEN"
-            },
-            {
-                id: 2,
-                merchant_id: 1,
-                name: "Ca tối — 23/10/2026",
-                target_revenue: 85000000,
-                start_time: "2026-10-23T15:00:00",
-                end_time: "2026-10-23T22:30:00",
-                status: "CLOSED"
-            }
-        ],
-        orders: [
-            {
-                id: 3,
-                shift_id: 1,
-                order_code: "ORD1003",
-                note: "Bàn 05 - Khách dùng tại quán",
-                total_amount: 15000000,
-                net_paid_amount: 0,
-                overpaid_amount: 0,
-                order_status: "CONFIRMED_ORDER",
-                payment_status: "UNPAID",
-                qr_request: {
-                    id: 103,
-                    request_code: "REQ-ORD1003-01",
-                    expected_amount: 15000000,
-                    status: "ACTIVE",
-                    expires_at: "2026-10-24T23:59:00"
-                },
-                created_at: "2026-10-24T10:05:00"
-            },
-            {
-                id: 4,
-                shift_id: 1,
-                order_code: "ORD1004",
-                note: "Đơn khách đặt mang về",
-                total_amount: 10000000,
-                net_paid_amount: 0,
-                overpaid_amount: 0,
-                order_status: "CONFIRMED_ORDER",
-                payment_status: "UNPAID",
-                qr_request: null,
-                created_at: "2026-10-24T10:30:00"
-            },
-            {
-                id: 2,
-                shift_id: 1,
-                order_code: "ORD1002",
-                note: "Bàn 02",
-                total_amount: 40000000,
-                net_paid_amount: 40000000,
-                overpaid_amount: 0,
-                order_status: "CONFIRMED_ORDER",
-                payment_status: "PAID",
-                qr_request: {
-                    id: 102,
-                    request_code: "REQ-ORD1002-01",
-                    expected_amount: 40000000,
-                    status: "FULFILLED",
-                    expires_at: "2026-10-24T23:59:00"
-                },
-                created_at: "2026-10-24T09:10:00"
-            },
-            {
-                id: 1,
-                shift_id: 1,
-                order_code: "ORD1001",
-                note: "Bàn 01",
-                total_amount: 35000000,
-                net_paid_amount: 35000000,
-                overpaid_amount: 0,
-                order_status: "CONFIRMED_ORDER",
-                payment_status: "PAID",
-                qr_request: {
-                    id: 101,
-                    request_code: "REQ-ORD1001-01",
-                    expected_amount: 35000000,
-                    status: "FULFILLED",
-                    expires_at: "2026-10-24T23:59:00"
-                },
-                created_at: "2026-10-24T08:15:00"
-            }
-        ],
-        bank_transactions: [
-            {
-                id: 3,
-                merchant_id: 1,
-                reference_code: "FT2629400103",
-                amount: 5000000,
-                allocated_amount: 0,
-                unallocated_amount: 5000000,
-                transfer_content: "NGUYEN VAN A CHUYEN KHOAN",
-                match_status: "UNMATCHED",
-                created_at: "2026-10-24T10:20:00"
-            },
-            {
-                id: 2,
-                merchant_id: 1,
-                reference_code: "FT2629400102",
-                amount: 40000000,
-                allocated_amount: 40000000,
-                unallocated_amount: 0,
-                transfer_content: "TT ORD1002",
-                match_status: "FULLY_ALLOCATED",
-                created_at: "2026-10-24T09:14:00"
-            },
-            {
-                id: 1,
-                merchant_id: 1,
-                reference_code: "FT2629400101",
-                amount: 35000000,
-                allocated_amount: 35000000,
-                unallocated_amount: 0,
-                transfer_content: "TT ORD1001",
-                match_status: "FULLY_ALLOCATED",
-                created_at: "2026-10-24T08:18:00"
-            }
-        ],
-        allocations: [
-            {
-                id: 1,
-                bank_transaction_id: 1,
-                reference_code: "FT2629400101",
-                payment_request_id: 101,
-                order_id: 1,
-                order_code: "ORD1001",
-                entry_type: "ALLOCATION",
-                allocated_amount: 35000000,
-                reversal_of_id: null,
-                allocation_mode: "AUTO",
-                prev_hash: "0000000000000000000000000000000000000000000000000000000000000000",
-                record_hash: "a91f4c7e8b1209d3e56f182a45c87b90d12e34f5a6b7c8d9e0f1a2b3c4d5e6f7",
-                created_at: "2026-10-24T08:18:05",
-                is_valid: true
-            },
-            {
-                id: 2,
-                bank_transaction_id: 2,
-                reference_code: "FT2629400102",
-                payment_request_id: 102,
-                order_id: 2,
-                order_code: "ORD1002",
-                entry_type: "ALLOCATION",
-                allocated_amount: 40000000,
-                reversal_of_id: null,
-                allocation_mode: "AUTO",
-                prev_hash: "a91f4c7e8b1209d3e56f182a45c87b90d12e34f5a6b7c8d9e0f1a2b3c4d5e6f7",
-                record_hash: "b82e5d9a1c3407f8a12b34c56d78e90f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d",
-                created_at: "2026-10-24T09:14:04",
-                is_valid: true
-            }
-        ],
-        decisions: [
-            {
-                id: 1,
-                order_id: 2,
-                order_code: "ORD1002",
-                bank_transaction_id: 2,
-                reference_code: "FT2629400102",
-                reviewer_id: 3,
-                decision_type: "APPROVE_MANUAL_MATCH",
-                reason: "Đã kiểm tra sao kê và xác nhận khớp hợp lệ cho đơn hàng ORD1002.",
-                biometric_verified: true,
-                review_date: "2026-10-24T09:15:00"
-            }
-        ]
+        shifts: [],
+        orders: [],
+        bank_transactions: [],
+        allocations: [],
+        decisions: []
     };
 }
 
@@ -206,17 +37,27 @@ function saveDemoStore(store) {
 }
 
 function resetDemoStore() {
-    const init = getInitialDemoStore();
-    saveDemoStore(init);
-    showToast("Đã khôi phục dữ liệu mặc định của cửa hàng.", "info");
+    localStorage.removeItem(DEMO_STORE_KEY);
+    showToast("Đã làm mới dữ liệu bộ nhớ đệm trình duyệt.", "info");
     setTimeout(() => window.location.reload(), 350);
 }
 
-function computeStoreSummary(store) {
-    const validOrders = (store.orders || []).filter((o) =>
+function computeStoreSummary(store, shiftId = null) {
+    const allOrders = store.orders || [];
+    const scopedOrders = (shiftId && String(shiftId).toUpperCase() !== "ALL")
+        ? allOrders.filter(o => String(o.shift_id) === String(shiftId))
+        : allOrders;
+
+    const validOrders = scopedOrders.filter((o) =>
         ["CONFIRMED_ORDER", "UNDER_REVIEW"].includes(String(o.order_status).toUpperCase())
     );
+    const cancelledOrders = scopedOrders.filter((o) =>
+        String(o.order_status).toUpperCase() === "CANCELLED_ORDER"
+    );
+
     const validOrderTotal = validOrders.reduce((s, o) => s + Number(o.total_amount || 0), 0);
+    const cancelledOrderTotal = cancelledOrders.reduce((s, o) => s + Number(o.total_amount || 0), 0);
+    const totalOrderAmount = scopedOrders.reduce((s, o) => s + Number(o.total_amount || 0), 0);
 
     const activeQrTotal = validOrders.reduce((s, o) => {
         const qr = o.qr_request;
@@ -231,9 +72,25 @@ function computeStoreSummary(store) {
         .filter((t) => ["UNMATCHED", "PARTIALLY_ALLOCATED"].includes(String(t.match_status).toUpperCase()))
         .reduce((s, t) => s + Number(t.unallocated_amount || 0), 0);
 
+    const shifts = store.shifts || [];
+    let targetRev = 0;
+    if (shiftId && String(shiftId).toUpperCase() !== "ALL") {
+        const matchedShift = shifts.find(s => String(s.id) === String(shiftId));
+        if (matchedShift) targetRev = Number(matchedShift.target_revenue || 0);
+    } else {
+        targetRev = shifts.reduce((s, sh) => s + Number(sh.target_revenue || 0), 0);
+    }
+
     return {
-        target_revenue: 120000000,
+        shift_id: shiftId || (shifts.length > 0 ? String(shifts[0].id) : "NONE"),
+        shift_name: shiftId === "ALL" ? "Tất cả ca bán hàng" : (shifts.length > 0 ? `Ca ${shiftId || shifts[0].id}` : "Chưa có ca làm việc"),
+        target_revenue: targetRev,
         valid_order_total: validOrderTotal,
+        cancelled_order_total: cancelledOrderTotal,
+        total_order_amount: totalOrderAmount,
+        total_order_count: scopedOrders.length,
+        valid_order_count: validOrders.length,
+        cancelled_order_count: cancelledOrders.length,
         active_qr_request_total: activeQrTotal,
         allocated_payment_total: netAllocated,
         unissued_qr_amount: Math.max(0, validOrderTotal - activeQrTotal),
@@ -242,6 +99,8 @@ function computeStoreSummary(store) {
         unallocated_bank_tx_total: unallocatedBank,
         total_bank_received: netAllocated + unallocatedBank,
         ledger_integrity_valid: true,
+        orders: scopedOrders,
+        available_shifts: shifts,
         ledger_entries: store.allocations || [],
         bank_transactions: store.bank_transactions || [],
         payment_allocations: store.allocations || [],
@@ -334,7 +193,8 @@ function formatNumber(amount) {
 
 function formatDateTime(isoString) {
     if (!isoString) return "—";
-    const d = new Date(isoString);
+    const s = String(isoString).replace(" ", "T");
+    const d = new Date(s);
     if (Number.isNaN(d.getTime())) return String(isoString);
     return d.toLocaleString("vi-VN", {
         hour12: false,
@@ -342,7 +202,8 @@ function formatDateTime(isoString) {
         month: "2-digit",
         day: "2-digit",
         hour: "2-digit",
-        minute: "2-digit"
+        minute: "2-digit",
+        second: "2-digit"
     });
 }
 
@@ -448,6 +309,7 @@ function showToast(message, type = "success") {
 }
 
 // Thanh điều hướng chuẩn Web App thực tế (Không có banner nhắc bài)
+// Thanh điều hướng chuẩn Web App thực tế (4 phân hệ cửa hàng, ẩn Cổng thanh toán mô phỏng)
 function renderNavbar(activePage = "shifts") {
     const mount = document.getElementById("app-navbar");
     if (!mount) return;
@@ -464,15 +326,12 @@ function renderNavbar(activePage = "shifts") {
                     </div>
                 </a>
 
-                <nav class="step-pills-row flex-grow-1" style="max-width: 680px;" aria-label="Menu chức năng">
+                <nav class="step-pills-row flex-grow-1" style="max-width: 580px; grid-template-columns: repeat(4, 1fr);" aria-label="Menu chức năng">
                     <a href="index.html" class="step-pill-item justify-content-center ${activePage === "shifts" ? "active" : ""}">
                         <span>Ca làm việc</span>
                     </a>
                     <a href="pos.html" class="step-pill-item justify-content-center ${activePage === "pos" ? "active" : ""}">
                         <span>Quầy thu ngân</span>
-                    </a>
-                    <a href="bank-simulator.html" class="step-pill-item justify-content-center ${activePage === "simulator" ? "active" : ""}">
-                        <span>Cổng thanh toán</span>
                     </a>
                     <a href="reconciliation.html" class="step-pill-item justify-content-center ${activePage === "reconcile" ? "active" : ""}">
                         <span>Đối soát lệch</span>

@@ -1,12 +1,15 @@
 // ==========================================================================
 // [P1-13] VIETQR RECONHUB — WEB SPEECH API TTS SPEAKER MODULE
 // File: frontend/js/tts_speaker.js
-// Quy tắc bắt buộc (Nguyên tắc 8 - README & P1-13):
-//   1. Tách riêng 3 mẫu câu thông báo cho PAID, PARTIALLY_PAID và Chuyển thừa.
+// Chức năng: Loa thông báo tự động khi nhận tiền thanh toán thành công
+// Quy tắc:
+//   1. Nội dung phát theo số tiền nhận được (đủ tiền, chuyển thiếu, chuyển thừa).
 //   2. Lưu trạng thái lastAnnouncedState[order_code] để chống đọc lặp khi Polling.
+//   3. Hỗ trợ bật/tắt loa trực tiếp qua công tắc tts-enable-toggle.
 // ==========================================================================
 
 const lastAnnouncedState = {};
+const orderPreviousPaid = {};
 let cachedVietVoice = null;
 
 // --------------------------------------------------------------------------
@@ -46,14 +49,15 @@ function formatAmountForSpeech(amount) {
 }
 
 // --------------------------------------------------------------------------
-// 3. TẠO 3 MẪU CÂU THÔNG BÁO CHUẨN NGHIỆP VỤ P1-13 (TC-02, TC-03, TC-04)
+// 3. TẠO CÂU THÔNG BÁO PHÁT THEO SỐ TIỀN THỰC TẾ NHẬN ĐƯỢC
 // --------------------------------------------------------------------------
 function buildOrderSpeechMessage({
     orderCode,
     paymentStatus,
     totalAmount = 0,
     netPaidAmount = 0,
-    overpaidAmount = 0
+    overpaidAmount = 0,
+    receivedAmount = null
 }) {
     const code = String(orderCode || "ORD").trim();
     const status = String(paymentStatus || "").toUpperCase();
@@ -62,20 +66,26 @@ function buildOrderSpeechMessage({
     const extra = Number(overpaidAmount || 0);
     const remaining = Math.max(0, total - paid);
 
-    // Trường hợp 3 (TC-04): Phát sinh khoản tiền chuyển thừa (unallocated_amount > 0 từ giao dịch của đơn)
+    // Xác định số tiền thực tế nhận được trong giao dịch
+    const actualReceived = Number(
+        receivedAmount !== null && receivedAmount !== undefined && Number(receivedAmount) > 0
+            ? receivedAmount
+            : (extra > 0 ? (total + extra) : (paid > 0 ? paid : total))
+    );
+
+    // Trường hợp 1: Chuyển thừa (status = PAID và extra > 0)
     if (status === "PAID" && extra > 0) {
-        return `Đơn hàng ${code} đã thanh toán đủ, phát sinh khoản chuyển thừa ${formatAmountForSpeech(extra)} đồng cần kiểm tra.`;
+        return `Đã nhận ${formatAmountForSpeech(actualReceived)} đồng. Thừa ${formatAmountForSpeech(extra)} đồng.`;
     }
 
-    // Trường hợp 1 (TC-02): Đơn hàng chuyển sang PAID (Thu đủ 100%, không có tiền thừa)
-    if (status === "PAID") {
-        const displayPaid = paid > 0 ? paid : total;
-        return `ReconHub thông báo: Đơn hàng ${code} đã thanh toán đủ ${formatAmountForSpeech(displayPaid)} đồng.`;
-    }
-
-    // Trường hợp 2 (TC-03): Đơn hàng chuyển sang PARTIALLY_PAID (Khách chuyển thiếu)
+    // Trường hợp 2: Chuyển thiếu (status = PARTIALLY_PAID)
     if (status === "PARTIALLY_PAID") {
-        return `Chú ý: Đơn hàng ${code} mới nhận một phần là ${formatAmountForSpeech(paid)} đồng, còn thiếu ${formatAmountForSpeech(remaining)} đồng.`;
+        return `Đã nhận ${formatAmountForSpeech(actualReceived)} đồng. Còn thiếu ${formatAmountForSpeech(remaining)} đồng.`;
+    }
+
+    // Trường hợp 3: Thanh toán thành công đủ tiền (status = PAID)
+    if (status === "PAID") {
+        return `Đã nhận ${formatAmountForSpeech(actualReceived)} đồng.`;
     }
 
     return "";
@@ -91,6 +101,7 @@ function speakTextVi(message) {
     const msgEl = document.getElementById("tts-last-message");
     const timeEl = document.getElementById("tts-last-time");
     if (msgEl) {
+        msgEl.dataset.hasSpoken = "true";
         msgEl.textContent = `“${message}”`;
         if (window.gsap && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
             window.gsap.fromTo(msgEl, { autoAlpha: 0.35, y: 4 }, { autoAlpha: 1, y: 0, duration: 0.25 });
@@ -106,7 +117,7 @@ function speakTextVi(message) {
 
     if (!("speechSynthesis" in window)) {
         if (typeof showToast === "function") {
-            showToast(`Thông báo TTS: ${message}`, "info");
+            showToast(`Thông báo: ${message}`, "info");
         }
         return false;
     }
@@ -129,7 +140,7 @@ function speakTextVi(message) {
 }
 
 // --------------------------------------------------------------------------
-// 5. KIỂM TRA CHỐNG ĐỌC LẶP KHI POLLING (lastAnnouncedState[order_code])
+// 5. TỰ ĐỘNG PHÁT LOA KHI CÓ THANH TOÁN (Chống đọc lặp khi Polling)
 // --------------------------------------------------------------------------
 function announceOrderChangeIfNeeded(orderObj, options = { isInitialSnapshot: false }) {
     if (!orderObj || !orderObj.order_code) return false;
@@ -144,14 +155,17 @@ function announceOrderChangeIfNeeded(orderObj, options = { isInitialSnapshot: fa
     );
     const overpaidAmount = Number(orderObj.overpaid_amount || orderObj.extra_unallocated_amount || 0);
 
-    // Khóa trạng thái chuẩn theo đặc tả P1-13: "${payment_status}_${net_paid_amount}" (kèm tiền thừa nếu có)
+    // Khóa trạng thái nhận diện: "${payment_status}_${net_paid_amount}" (kèm tiền thừa nếu có)
     const stateSignature =
         overpaidAmount > 0
             ? `${paymentStatus}_${netPaidAmount}_OVER_${overpaidAmount}`
             : `${paymentStatus}_${netPaidAmount}`;
 
     const previousSignature = lastAnnouncedState[orderCode];
+    const prevPaid = orderPreviousPaid[orderCode] !== undefined ? orderPreviousPaid[orderCode] : 0;
+
     lastAnnouncedState[orderCode] = stateSignature;
+    orderPreviousPaid[orderCode] = netPaidAmount;
 
     // Lần đầu tiên mới mở trang POS thì chỉ ghi nhận snapshot, không đọc loa loạt đơn cũ
     if (options.isInitialSnapshot && previousSignature === undefined) {
@@ -168,12 +182,23 @@ function announceOrderChangeIfNeeded(orderObj, options = { isInitialSnapshot: fa
         return false;
     }
 
+    // Xác định số tiền nhận được trong đợt thanh toán này
+    let receivedAmount = null;
+    if (orderObj.last_received_amount !== undefined && orderObj.last_received_amount !== null && Number(orderObj.last_received_amount) > 0) {
+        receivedAmount = Number(orderObj.last_received_amount);
+    } else if (netPaidAmount > prevPaid) {
+        receivedAmount = (netPaidAmount - prevPaid) + overpaidAmount;
+    } else {
+        receivedAmount = netPaidAmount + overpaidAmount;
+    }
+
     const speechText = buildOrderSpeechMessage({
         orderCode,
         paymentStatus,
         totalAmount,
         netPaidAmount,
-        overpaidAmount
+        overpaidAmount,
+        receivedAmount
     });
 
     if (speechText) {
@@ -187,7 +212,7 @@ function announceOrderChangeIfNeeded(orderObj, options = { isInitialSnapshot: fa
 }
 
 // --------------------------------------------------------------------------
-// 6. HÀM KIỂM THỬ NHANH 3 KỊCH BẢN LOA TTS TRÊN MÀN HÌNH POS (DEMO TRỰC TIẾP)
+// 6. HÀM KIỂM THỬ CHƯƠNG TRÌNH (Programmatic Test Scenarios)
 // --------------------------------------------------------------------------
 function triggerDemoTtsScenario(scenarioType) {
     if (scenarioType === "PAID") {
@@ -196,7 +221,8 @@ function triggerDemoTtsScenario(scenarioType) {
             paymentStatus: "PAID",
             totalAmount: 200000,
             netPaidAmount: 200000,
-            overpaidAmount: 0
+            overpaidAmount: 0,
+            receivedAmount: 200000
         });
         speakTextVi(msg);
         if (typeof showToast === "function") showToast(msg, "success");
@@ -206,7 +232,8 @@ function triggerDemoTtsScenario(scenarioType) {
             paymentStatus: "PARTIALLY_PAID",
             totalAmount: 200000,
             netPaidAmount: 120000,
-            overpaidAmount: 0
+            overpaidAmount: 0,
+            receivedAmount: 120000
         });
         speakTextVi(msg);
         if (typeof showToast === "function") showToast(msg, "warning");
@@ -216,7 +243,8 @@ function triggerDemoTtsScenario(scenarioType) {
             paymentStatus: "PAID",
             totalAmount: 200000,
             netPaidAmount: 200000,
-            overpaidAmount: 20000
+            overpaidAmount: 20000,
+            receivedAmount: 220000
         });
         speakTextVi(msg);
         if (typeof showToast === "function") showToast(msg, "info");
