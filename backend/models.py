@@ -100,6 +100,8 @@ class Shift(Base):
     end_time = Column(DateTime, nullable=False)
     closed_at = Column(DateTime, nullable=True)
     status = Column(Enum(ShiftStatus), default=ShiftStatus.OPEN)
+    is_archived = Column(Boolean, default=False, nullable=False)
+    archived_at = Column(DateTime, nullable=True)
 
 
 class Order(Base):

@@ -60,12 +60,11 @@ async function loadReconciliationWorkspace(showNotification = false) {
             apiRequest("/orders").catch(() => [])
         ]);
 
-        const store = getDemoStore();
         const orders = Array.isArray(ordersRes) ? ordersRes : (ordersRes.items || ordersRes.orders || []);
-        reconOrders = orders.length > 0 ? orders : store.orders;
-        reconBankTxs = summaryRes.bank_transactions || summaryRes.recent_bank_transactions || store.bank_transactions;
-        reconAllocations = summaryRes.payment_allocations || summaryRes.ledger_entries || store.allocations;
-        reconDecisions = summaryRes.decisions || summaryRes.recent_decisions || store.decisions;
+        reconOrders = Array.isArray(orders) ? orders : [];
+        reconBankTxs = Array.isArray(summaryRes.bank_transactions) ? summaryRes.bank_transactions : (Array.isArray(summaryRes.recent_bank_transactions) ? summaryRes.recent_bank_transactions : []);
+        reconAllocations = Array.isArray(summaryRes.payment_allocations) ? summaryRes.payment_allocations : (Array.isArray(summaryRes.ledger_entries) ? summaryRes.ledger_entries : []);
+        reconDecisions = Array.isArray(summaryRes.decisions) ? summaryRes.decisions : (Array.isArray(summaryRes.recent_decisions) ? summaryRes.recent_decisions : []);
     } catch (_) {
         const store = getDemoStore();
         reconOrders = store.orders || [];
@@ -83,10 +82,11 @@ async function loadReconciliationWorkspace(showNotification = false) {
     }
 }
 
-// 1. Bảng các khoản tiền chờ xử lý
+// 1. Bảng các khoản tiền chờ xử lý (Phong cách mới đồng bộ thiết kế)
 function renderUnmatchedTable() {
     const tbody = document.getElementById("recon-unmatched-tbody");
     const countBadge = document.getElementById("badge-unmatched-count");
+    const todoPill = document.getElementById("unmatched-todo-pill");
     if (!tbody) return;
 
     // Các khoản đã được xử lý sẽ không hiện ở tab chờ xử lý nữa
@@ -99,17 +99,22 @@ function renderUnmatchedTable() {
         return Number(tx.unallocated_amount || 0) > 0 || String(tx.match_status || "").toUpperCase() === "UNMATCHED";
     });
 
-    if (countBadge) {
     const count = pendingTxs.length;
-    countBadge.textContent = String(count);
-    countBadge.classList.toggle("d-none", count === 0);
-}
+    if (countBadge) {
+        countBadge.textContent = String(count);
+        countBadge.classList.toggle("d-none", count === 0);
+    }
+    if (todoPill) {
+        todoPill.textContent = `${count} việc cần làm`;
+        todoPill.classList.toggle("d-none", count === 0);
+    }
 
     if (pendingTxs.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="text-center py-5 text-success fw-medium">
-                    ✓ Tất cả các khoản chuyển khoản đã được xử lý hoàn tất (Không còn khoản tiền chờ xử lý).
+                <td colspan="5" class="text-center py-5 text-secondary">
+                    <div class="fw-semibold text-success mb-1">✓ Đã đối soát tất cả các khoản chuyển khoản</div>
+                    <span class="small">Không có giao dịch nào đang chờ phân bổ.</span>
                 </td>
             </tr>
         `;
@@ -120,27 +125,41 @@ function renderUnmatchedTable() {
         .map((tx) => {
             const unalloc = Number(tx.unallocated_amount || 0);
 
+            // Xác định loại vấn đề (Issue pill)
+            const isOverpayment = Boolean(
+                tx.is_overpayment ||
+                (Number(tx.allocated_amount || 0) > 0 && Number(tx.unallocated_amount || 0) > 0)
+            );
+            const content = (tx.transfer_content || "").toLowerCase();
+            const reason = (tx.unmatched_reason || "").toLowerCase();
+
+            let issueBadgeHtml = "";
+            if (isOverpayment) {
+                issueBadgeHtml = `<span class="badge-recon-warning">Chuyển dư tiền</span>`;
+            } else if (reason.includes("nội dung") || reason.includes("sai") || content.includes("ban") || content.includes("bàn") || content.includes("hd") || content.includes("don")) {
+                issueBadgeHtml = `<span class="badge-recon-warning">Sai nội dung</span>`;
+            } else {
+                issueBadgeHtml = `<span class="badge-recon-danger">Chưa rõ đơn</span>`;
+            }
+
             return `
                 <tr id="row-recon-tx-${tx.id}">
                     <td>
                         <div class="fw-bold text-dark font-numeric">${escapeReconHtml(tx.reference_code)}</div>
-                        <div class="text-secondary" style="font-size: 0.72rem;">${formatDateTime(tx.created_at)}</div>
+                        <div class="text-secondary" style="font-size: 0.75rem;">${formatDateTime(tx.created_at)}</div>
                     </td>
                     <td>
-                        <span class="fw-medium text-dark">${escapeReconHtml(tx.transfer_content)}</span>
-                    </td>
-                    <td class="text-end font-numeric">
-                        ${formatVND(tx.amount)}
-                    </td>
-                    <td class="text-end fw-bold text-danger font-numeric">
-                        ${formatVND(unalloc)}
+                        <span class="fw-semibold text-dark">${escapeReconHtml(tx.transfer_content)}</span>
                     </td>
                     <td>
-                        ${renderStatusBadge(tx.match_status || "UNMATCHED")}
+                        ${issueBadgeHtml}
+                    </td>
+                    <td>
+                        <span class="fw-bold font-numeric text-dark" style="font-size: 0.95rem;">${formatVND(unalloc)}</span>
                     </td>
                     <td class="text-end" id="action-cell-tx-${tx.id}">
-                        <button type="button" class="btn-fp-dark py-1 px-3" id="btn-handle-tx-${tx.id}" style="font-size: 0.8rem;" onclick="handleTransactionAction(${tx.id})">
-                            Xử lý
+                        <button type="button" class="btn-recon-white" id="btn-handle-tx-${tx.id}" onclick="handleTransactionAction(${tx.id})">
+                            Xử lý ngay
                         </button>
                     </td>
                 </tr>
@@ -157,7 +176,7 @@ function renderAllocationsTable() {
     if (!reconAllocations || reconAllocations.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="text-center py-4 text-secondary">
+                <td colspan="5" class="text-center py-5 text-secondary">
                     Chưa có bút toán phân bổ nào.
                 </td>
             </tr>
@@ -177,31 +196,46 @@ function renderAllocationsTable() {
             const alreadyReversed = reversedOriginIds.has(Number(alloc.id));
             const amount = Number(alloc.allocated_amount || 0);
 
+            // Tìm hóa đơn liên kết để lấy mô tả bàn / món ăn nếu có
+            const matchedOrd = (reconOrders || []).find((o) => Number(o.id) === Number(alloc.order_id));
+            const orderDesc = matchedOrd && matchedOrd.items_summary
+                ? matchedOrd.items_summary
+                : matchedOrd && matchedOrd.table_number
+                ? `Bàn ${matchedOrd.table_number}`
+                : "Thanh toán đơn hàng";
+
+            const orderDisplayCode = alloc.order_code
+                ? (alloc.order_code.startsWith("HD") ? alloc.order_code : `HD-${alloc.order_code.replace(/^(ORD|HD)-?/i, '')}`)
+                : `HD #${alloc.order_id}`;
+
             return `
                 <tr>
                     <td>
-                        <div class="fw-bold text-dark">Bút toán #${alloc.id}</div>
-                        <div class="text-secondary" style="font-size: 0.72rem;">${formatDateTime(alloc.created_at)}</div>
-                    </td>
-                    <td class="font-numeric fw-medium">
-                        ${escapeReconHtml(alloc.reference_code || `GD #${alloc.bank_transaction_id}`)}
+                        <div class="fw-bold text-dark font-numeric">${escapeReconHtml(alloc.reference_code || `GD #${alloc.bank_transaction_id}`)}</div>
+                        <div class="text-secondary" style="font-size: 0.75rem;">${formatDateTime(alloc.created_at)}</div>
                     </td>
                     <td>
-                        <strong>Hóa đơn ${escapeReconHtml(alloc.order_code || `#${alloc.order_id}`)}</strong>
+                        <div class="fw-bold text-dark font-numeric">${escapeReconHtml(orderDisplayCode)}</div>
+                        <div class="text-secondary" style="font-size: 0.75rem;">${escapeReconHtml(orderDesc)}</div>
                     </td>
                     <td>
-                        ${renderStatusBadge(isReversal ? "REVERSAL" : "ALLOCATION")}
+                        <span class="fw-bold font-numeric text-dark" style="font-size: 0.95rem;">${formatVND(amount)}</span>
                     </td>
-                    <td class="text-end fw-bold font-numeric ${isReversal ? "text-danger" : "text-success"}">
-                        ${amount > 0 ? `+${formatVND(amount)}` : formatVND(amount)}
+                    <td>
+                        <div class="d-flex align-items-center gap-1.5 text-secondary" style="font-size: 0.85rem;">
+                            <svg class="hi-icon hi-icon-sm text-muted" viewBox="0 0 24 24">
+                                <path d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
+                            </svg>
+                            <span>${escapeReconHtml(alloc.reviewer_name || "Thu ngân")}</span>
+                        </div>
                     </td>
                     <td class="text-end">
                         ${
                             isReversal
                                 ? `<span class="small text-secondary">Bút toán đảo</span>`
                                 : alreadyReversed
-                                ? `<span class="fp-badge fp-badge-neutral">Đã hoàn đảo</span>`
-                                : `<button type="button" class="btn-fp-outline py-1 px-3" style="font-size: 0.78rem;" onclick="openReverseModal(${alloc.id})">
+                                ? `<span class="badge bg-light text-secondary border">Đã hoàn đảo</span>`
+                                : `<button type="button" class="btn btn-sm btn-link text-danger text-decoration-none fw-semibold p-0" onclick="openReverseModal(${alloc.id})">
                                        Đảo giao dịch
                                    </button>`
                         }
@@ -212,67 +246,98 @@ function renderAllocationsTable() {
         .join("");
 }
 
-// 3. Lịch sử phê duyệt
+// 3. Lịch sử phê duyệt (Hiển thị dạng bảng trực quan đồng bộ thiết kế)
 function renderDecisionsHistory() {
+    const tbody = document.getElementById("recon-decisions-tbody");
     const listEl = document.getElementById("recon-decisions-list");
-    if (!listEl) return;
+    if (!tbody && !listEl) return;
 
     if (!reconDecisions || reconDecisions.length === 0) {
-        listEl.innerHTML = `<div class="text-center py-4 text-secondary small">Chưa có lịch sử phê duyệt nào.</div>`;
+        const emptyHtml = `
+            <tr>
+                <td colspan="5" class="text-center py-5 text-secondary">
+                    Chưa có lịch sử phê duyệt nào.
+                </td>
+            </tr>
+        `;
+        if (tbody) tbody.innerHTML = emptyHtml;
+        if (listEl) listEl.innerHTML = `<div class="text-center py-4 text-secondary small">Chưa có lịch sử phê duyệt nào.</div>`;
         return;
     }
 
-    listEl.innerHTML = reconDecisions
+    const rowsHtml = reconDecisions
         .map((d) => {
-            const typeLabel = DECISION_TYPE_LABELS[d.decision_type] || d.decision_type;
-            const isOvp = d.decision_type === "OVERPAYMENT_RESOLUTION";
-            const badgeClass = isOvp ? "fp-badge-warning" : d.decision_type === "REVERSE_ALLOCATION" ? "fp-badge-danger" : "fp-badge-dark";
-            
             const txCode = d.reference_code || (d.bank_transaction_id ? `GD #${d.bank_transaction_id}` : "—");
-            const ordCode = d.order_code ? `Hóa đơn ${d.order_code}` : (d.order_id ? `Hóa đơn #${d.order_id}` : "Không có");
-            const reviewerName = d.reviewer_name || `Nhân viên #${d.reviewer_id || 1}`;
+            const ordCode = d.order_code
+                ? (d.order_code.startsWith("HD") ? d.order_code : `HD-${d.order_code.replace(/^(ORD|HD)-?/i, '')}`)
+                : (d.order_id ? `HD #${d.order_id}` : "Không có");
+            const reviewerName = d.reviewer_name || `Quản trị viên`;
 
-            let amountInfo = "";
-            if (d.tx_amount != null) {
-                amountInfo += `<span class="me-2">Số tiền GD: <strong>${formatVND(d.tx_amount)}</strong></span>`;
-            }
-            if (d.allocated_amount != null && d.allocated_amount > 0) {
-                amountInfo += `<span class="text-success me-2">Đã phân bổ: <strong>${formatVND(d.allocated_amount)}</strong></span>`;
-            }
-            if (d.unallocated_amount != null && d.unallocated_amount > 0) {
-                amountInfo += `<span class="text-danger me-2">Tiền thừa: <strong>${formatVND(d.unallocated_amount)}</strong></span>`;
+            let actionText = "";
+            if (d.decision_type === "APPROVE_MANUAL_MATCH") {
+                actionText = `Ghép giao dịch ${txCode} vào ${ordCode}`;
+            } else if (d.decision_type === "REVERSE_ALLOCATION") {
+                actionText = `Đảo giao dịch ${txCode}`;
+            } else if (d.decision_type === "OVERPAYMENT_RESOLUTION") {
+                actionText = `Xử lý tiền thừa cho ${ordCode}`;
+            } else {
+                actionText = DECISION_TYPE_LABELS[d.decision_type] || d.decision_type;
             }
 
-            const verifiedBadge = d.biometric_verified
-                ? `<span class="fp-badge fp-badge-success mb-1">✓ Đã xác thực bảo mật WebAuthn</span>`
-                : `<span class="fp-badge fp-badge-neutral mb-1">Chưa qua khóa bảo mật</span>`;
+            // Tách thời gian và ngày
+            const dRaw = d.review_date || d.created_at;
+            let timeStr = "—";
+            let dateStr = "";
+            if (dRaw) {
+                const dt = new Date(String(dRaw).replace(" ", "T"));
+                if (!isNaN(dt.getTime())) {
+                    timeStr = dt.toLocaleTimeString("vi-VN", { hour12: false });
+                    dateStr = dt.toLocaleDateString("vi-VN", { year: "numeric", month: "2-digit", day: "2-digit" });
+                }
+            }
+
+            const isAuto = d.security_mode === "SYSTEM_AUTO" || d.allocation_mode === "AUTO";
+            const methodPill = isAuto
+                ? `<span class="badge-recon-green">Tự động</span>`
+                : `<span class="badge-recon-blue">Thủ công</span>`;
+
+            const fidoBadge = d.biometric_verified
+                ? `<span class="badge bg-success-subtle text-success border border-success-subtle ms-1" style="font-size: 0.72rem;" title="Xác thực khóa bảo mật FIDO2 ECDSA P-256">✓ FIDO2</span>`
+                : "";
 
             return `
-                <div class="p-3 rounded-3 bg-light border small d-flex flex-wrap align-items-center justify-content-between gap-3">
-                    <div style="max-width: 70%;">
-                        <div class="d-flex align-items-center gap-2 mb-1">
-                            <span class="fp-badge ${badgeClass}">${escapeReconHtml(typeLabel)}</span>
-                            <strong class="text-dark font-numeric">${escapeReconHtml(txCode)}</strong>
-                            <span class="text-secondary">→</span>
-                            <strong class="text-primary">${escapeReconHtml(ordCode)}</strong>
+                <tr>
+                    <td>
+                        <div class="fw-semibold text-dark font-numeric">${timeStr}</div>
+                        <div class="text-secondary" style="font-size: 0.75rem;">${dateStr}</div>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="rounded-circle bg-light d-flex align-items-center justify-content-center text-secondary border" style="width: 26px; height: 26px; font-size: 0.75rem;">
+                                <svg class="hi-icon hi-icon-sm" viewBox="0 0 24 24">
+                                    <path d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
+                                </svg>
+                            </div>
+                            <span class="fw-medium text-dark">${escapeReconHtml(reviewerName)}</span>
                         </div>
-                        ${amountInfo ? `<div class="mb-1 text-secondary" style="font-size: 0.78rem;">${amountInfo}</div>` : ""}
-                        <div class="text-dark fw-medium">
-                            ${isOvp ? "Phương thức xử lý:" : "Lý do:"}
-                            <span class="fw-normal text-secondary">“${escapeReconHtml(d.reason)}”</span>
-                        </div>
-                        <div class="text-secondary mt-1" style="font-size: 0.72rem;">
-                            Thực hiện bởi: <strong>${escapeReconHtml(reviewerName)}</strong>
-                        </div>
-                    </div>
-                    <div class="text-end">
-                        ${verifiedBadge}
-                        <div class="text-secondary" style="font-size: 0.72rem;">${formatDateTime(d.review_date || d.created_at)}</div>
-                    </div>
-                </div>
+                    </td>
+                    <td>
+                        <div class="fw-semibold text-dark">${escapeReconHtml(actionText)}</div>
+                        <div class="text-secondary small mt-0.5">“${escapeReconHtml(d.reason || "Đối soát giao dịch")}”</div>
+                    </td>
+                    <td>
+                        <div class="fw-semibold text-primary font-numeric">${escapeReconHtml(ordCode)}</div>
+                        <div class="text-secondary font-numeric" style="font-size: 0.75rem;">${escapeReconHtml(txCode)}</div>
+                    </td>
+                    <td>
+                        ${methodPill}${fidoBadge}
+                    </td>
+                </tr>
             `;
         })
         .join("");
+
+    if (tbody) tbody.innerHTML = rowsHtml;
 }
 
 // 4. Xác định loại giao dịch và điều hướng mở hộp thoại tương ứng

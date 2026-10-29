@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
+from datetime import datetime, timedelta
 import models, schemas
 from database import get_db
 from dependencies import verify_merchant_user
@@ -60,19 +61,50 @@ def create_shift(
 @router.get("", response_model=List[schemas.ShiftResponse])
 @router.get("/", response_model=List[schemas.ShiftResponse])
 def get_shifts(
+    archived: Optional[bool] = False,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    month: Optional[str] = None,
     db: Session = Depends(get_db),
     user_info: dict = Depends(verify_merchant_user)
 ):
     # Tự động đóng các ca đã hết hạn
     auto_close_expired_shifts(db)
 
-    merchant_id = user_info.get("merchant_id", 1)
-    shifts = db.query(models.Shift).filter(
-        models.Shift.merchant_id == merchant_id
-    ).order_by(models.Shift.id.desc()).all()
+    query = db.query(models.Shift)
 
-    if not shifts:
-        shifts = db.query(models.Shift).order_by(models.Shift.id.desc()).all()
+    # Phân loại ca: Chưa lưu trữ (vận hành) vs Đã lưu trữ (kho lưu trữ)
+    if archived:
+        query = query.filter(models.Shift.is_archived == True)
+    else:
+        query = query.filter(models.Shift.is_archived == False)
+
+    # Lọc theo dải ngày (from_date / to_date)
+    if from_date and from_date.strip():
+        try:
+            f_dt = datetime.strptime(from_date.strip(), "%Y-%m-%d")
+            query = query.filter(models.Shift.start_time >= f_dt)
+        except ValueError:
+            pass
+    if to_date and to_date.strip():
+        try:
+            t_dt = datetime.strptime(to_date.strip(), "%Y-%m-%d") + timedelta(days=1)
+            query = query.filter(models.Shift.start_time < t_dt)
+        except ValueError:
+            pass
+
+    # Lọc theo tháng (YYYY-MM)
+    if month and month.strip():
+        try:
+            m_parts = month.strip().split("-")
+            y, m = int(m_parts[0]), int(m_parts[1])
+            start_m = datetime(y, m, 1)
+            end_m = datetime(y + 1, 1, 1) if m == 12 else datetime(y, m + 1, 1)
+            query = query.filter(models.Shift.start_time >= start_m, models.Shift.start_time < end_m)
+        except Exception:
+            pass
+
+    shifts = query.order_by(models.Shift.id.desc()).all()
     return shifts
 
 
@@ -86,8 +118,6 @@ def get_shift(
     auto_close_expired_shifts(db)
 
     shift = db.query(models.Shift).filter(models.Shift.id == shift_id).first()
-    if not shift and shift_id == 1:
-        shift = db.query(models.Shift).filter(models.Shift.id == 0).first()
 
     if not shift:
         raise HTTPException(
@@ -108,6 +138,56 @@ def close_shift_endpoint(
     Cập nhật status = CLOSED và ghi nhận thời điểm đóng ca thực tế (closed_at).
     """
     return close_shift_manually(db=db, shift_id=shift_id, user_info=user_info)
+
+
+@router.post("/{shift_id}/archive", response_model=schemas.ShiftResponse)
+def archive_shift_endpoint(
+    shift_id: int,
+    db: Session = Depends(get_db),
+    user_info: dict = Depends(verify_merchant_user)
+):
+    """
+    Lưu trữ ca làm việc vào kho lưu trữ (Yêu cầu ca đã đóng: status = CLOSED).
+    Ca sau khi lưu trữ sẽ ẩn khỏi trang Ca làm việc và chuyển sang trang Kho lưu trữ.
+    """
+    shift = db.query(models.Shift).filter(models.Shift.id == shift_id).first()
+    if not shift:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Không tìm thấy ca làm việc #{shift_id}."
+        )
+    if shift.status != models.ShiftStatus.CLOSED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Chỉ có thể lưu trữ ca làm việc đã được đóng và hoàn tất kiểm toán."
+        )
+    shift.is_archived = True
+    shift.archived_at = datetime.utcnow()
+    db.commit()
+    db.refresh(shift)
+    return shift
+
+
+@router.post("/{shift_id}/unarchive", response_model=schemas.ShiftResponse)
+def unarchive_shift_endpoint(
+    shift_id: int,
+    db: Session = Depends(get_db),
+    user_info: dict = Depends(verify_merchant_user)
+):
+    """
+    Khôi phục ca làm việc từ kho lưu trữ quay trở lại trang Ca làm việc.
+    """
+    shift = db.query(models.Shift).filter(models.Shift.id == shift_id).first()
+    if not shift:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Không tìm thấy ca làm việc #{shift_id}."
+        )
+    shift.is_archived = False
+    shift.archived_at = None
+    db.commit()
+    db.refresh(shift)
+    return shift
 
 
 # ==============================================================================

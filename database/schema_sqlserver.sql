@@ -6,6 +6,7 @@ GO
 -- -----------------------------------------------------------------------------------
 -- 1. XÓA CÁC BẢNG CŨ THEO THỨ TỰ NGƯỢC KHÓA NGOẠI (ĐỂ CHẠY LẠI SẠCH SẼ KHÔNG LỖI)
 -- -----------------------------------------------------------------------------------
+IF OBJECT_ID('dbo.shift_audits', 'U') IS NOT NULL DROP TABLE dbo.shift_audits;
 IF OBJECT_ID('dbo.decisions', 'U') IS NOT NULL DROP TABLE dbo.decisions;
 IF OBJECT_ID('dbo.payment_allocations', 'U') IS NOT NULL DROP TABLE dbo.payment_allocations;
 IF OBJECT_ID('dbo.bank_transactions', 'U') IS NOT NULL DROP TABLE dbo.bank_transactions;
@@ -69,6 +70,8 @@ CREATE TABLE dbo.shifts (
     end_time DATETIME2 NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'OPEN',
     closed_at DATETIME2 NULL,
+    is_archived BIT NOT NULL DEFAULT 0,
+    archived_at DATETIME2 NULL,
     CONSTRAINT CK_shifts_target_revenue CHECK (target_revenue > 0),
     CONSTRAINT CK_shifts_time_valid CHECK (end_time > start_time),
     CONSTRAINT CK_shifts_status CHECK (status IN ('DRAFT', 'OPEN', 'CLOSED', 'CANCELLED')),

@@ -1,98 +1,50 @@
+# -*- coding: utf-8 -*-
+
 with open("frontend/js/pos.js", "r", encoding="utf-8") as f:
     code = f.read()
 
-# 1. Update initPosPage to call initPosEventSource()
-old_init = """async function initPosPage() {
-    bindPosEvents();
-    // Bắt buộc tải và chọn đúng ca từ URL (?shift_id=...) trước khi tải bảng hóa đơn
-    await loadOpenShiftsForPos();
-    await loadPosOrders(false);
-    startPosPolling();"""
-
-new_init = """async function initPosPage() {
-    bindPosEvents();
-    initPosEventSource();
-    // Bắt buộc tải và chọn đúng ca từ URL (?shift_id=...) trước khi tải bảng hóa đơn
-    await loadOpenShiftsForPos();
-    await loadPosOrders(false);
-    startPosPolling();"""
-
-if old_init in code:
-    code = code.replace(old_init, new_init, 1)
-else:
-    print("Warning: old_init not found")
-
-# 2. Add SSE handler functions and replace startPosPolling
-old_polling = """// 5. Tự động đồng bộ trạng thái đơn mỗi 2 giây
-let shiftCheckTick = 0;
-function startPosPolling() {
-    if (posPollingTimer) clearInterval(posPollingTimer);
-    posPollingTimer = setInterval(async () => {
-        if (document.hidden) return;
-        loadPosOrders(false, true);
-
-        // Kiểm tra trạng thái ca định kỳ mỗi 4 giây
-        shiftCheckTick++;
-        if (shiftCheckTick % 2 === 0) {
-            try {
-                const data = await apiRequest("/shifts");
-                posShiftsCache = Array.isArray(data) ? data : (data.items || data.shifts || []);
-                updatePosShiftLockState();
-            } catch (_) {}
-        }
-    }, 2000);
-}"""
-
-new_polling = """// ==========================================================================
-// KIẾN TRÚC THỜI GIAN THỰC: SERVER-SENT EVENTS (SSE) & PHÁT LOA TỨC THỜI (< 100ms)
-// ==========================================================================
-let posEventSource = null;
-
-function initPosEventSource() {
-    if (posEventSource) {
-        try { posEventSource.close(); } catch (_) {}
-    }
-
-    try {
-        const streamUrl = `${API_BASE_URL}/events/stream`;
-        posEventSource = new EventSource(streamUrl);
-
-        posEventSource.onopen = () => {
-            console.log("SSE Real-time Stream connected to /events/stream");
-            updateSseStatusBadge(true);
-        };
-
-        posEventSource.addEventListener("order_updated", (event) => {
-            try {
-                const updatedOrder = JSON.parse(event.data);
-                handleOrderUpdateEvent(updatedOrder);
-            } catch (err) {
-                console.error("Error processing SSE order_updated:", err);
-            }
-        });
-
-        posEventSource.addEventListener("payment_received", (event) => {
-            try {
-                const payment = JSON.parse(event.data);
-                if (typeof showToast === "function") {
-                    const amtStr = new Intl.NumberFormat('vi-VN').format(payment.amount);
-                    showToast(`TingTing: Nhận +${amtStr} ₫ (GD: ${payment.reference_code})`, "info");
-                }
-            } catch (err) {
-                console.error("Error processing SSE payment_received:", err);
-            }
-        });
-
-        posEventSource.onerror = (err) => {
-            console.warn("SSE connection interrupted, browser auto-reconnecting...", err);
-            updateSseStatusBadge(false);
-        };
-    } catch (e) {
-        console.warn("EventSource failed to initialize:", e);
-    }
+# 1. Add formatTimeOnly function if not present
+if "function formatTimeOnly" not in code:
+    time_helper = """
+function formatTimeOnly(dateStr) {
+    if (!dateStr) return "--:--";
+    const d = new Date(dateStr);
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
+"""
+    code = time_helper + code
 
-function updateSseStatusBadge(isConnected) {
+# 2. Update updatePosShiftLockState badge and header name
+old_badge_block = """    if (badgeEl) {
+        badgeEl.className = badgeClass;
+        badgeEl.textContent = badgeText;
+    }"""
+
+new_badge_block = """    if (badgeEl) {
+        if (!isLocked) {
+            badgeEl.className = "shift-status-pill is-open";
+            badgeEl.textContent = "● Ca đang hoạt động";
+        } else {
+            badgeEl.className = "shift-status-pill is-closed";
+            badgeEl.textContent = "● " + badgeText;
+        }
+    }
+
+    const headerShiftName = document.getElementById("pos-header-shift-name");
+    if (headerShiftName) {
+        if (shift) {
+            const shiftCode = `CA-${String(shift.id).padStart(4, "0")}`;
+            headerShiftName.textContent = `${shift.name} • ${shiftCode}`;
+        } else {
+            headerShiftName.textContent = "Tất cả ca bán hàng";
+        }
+    }"""
+
+code = code.replace(old_badge_block, new_badge_block)
+
+# 3. Update updateSseStatusBadge
+old_sse_fn = """function updateSseStatusBadge(isConnected) {
     const badge = document.getElementById("pos-sse-status-badge");
     if (badge) {
         if (isConnected) {
@@ -103,56 +55,155 @@ function updateSseStatusBadge(isConnected) {
             badge.innerHTML = '● Đang kết nối lại';
         }
     }
-}
-
-function handleOrderUpdateEvent(updatedOrder) {
-    if (!updatedOrder || !updatedOrder.id) return;
-
-    // 1. Cập nhật cache đơn hàng trong bộ nhớ POS
-    const idx = posOrdersCache.findIndex((o) => Number(o.id) === Number(updatedOrder.id));
-    if (idx >= 0) {
-        posOrdersCache[idx] = updatedOrder;
-    } else {
-        posOrdersCache.unshift(updatedOrder);
-    }
-
-    // 2. Tự động phát loa thông báo ngay lập tức (< 100ms) qua Web Speech API
-    if (typeof announceOrderChangeIfNeeded === "function") {
-        announceOrderChangeIfNeeded(updatedOrder, { isInitialSnapshot: false });
-    }
-
-    // 3. Render lại bảng danh sách hóa đơn
-    renderPosOrdersTable(posOrdersCache);
-
-    // 4. Nếu đang mở modal VietQR của đơn này -> Cập nhật trạng thái hiển thị
-    if (currentSelectedOrderForQr && Number(currentSelectedOrderForQr.id) === Number(updatedOrder.id)) {
-        currentSelectedOrderForQr = updatedOrder;
-        const modalEl = document.getElementById("vietqrModal");
-        if (modalEl && modalEl.classList.contains("show")) {
-            displayQrInModal(updatedOrder, updatedOrder.qr_request || updatedOrder.active_qr);
-        }
-    }
-}
-
-// 5. Tự động đồng bộ dự phòng (Fallback Polling mỗi 20 giây thay vì 2 giây, giảm 90% tải DB)
-let shiftCheckTick = 0;
-function startPosPolling() {
-    if (posPollingTimer) clearInterval(posPollingTimer);
-    posPollingTimer = setInterval(async () => {
-        if (document.hidden) return;
-        shiftCheckTick++;
-        try {
-            const data = await apiRequest("/shifts");
-            posShiftsCache = Array.isArray(data) ? data : (data.items || data.shifts || []);
-            updatePosShiftLockState();
-        } catch (_) {}
-    }, 20000);
 }"""
 
-if old_polling in code:
-    code = code.replace(old_polling, new_polling, 1)
-    with open("frontend/js/pos.js", "w", encoding="utf-8") as f:
-        f.write(code)
-    print("SUCCESS: frontend/js/pos.js updated with SSE real-time events & polling reduction!")
+new_sse_fn = """function updateSseStatusBadge(isConnected) {
+    const badge = document.getElementById("pos-sse-status-badge");
+    if (badge) {
+        if (isConnected) {
+            badge.className = "shift-status-pill is-open";
+            badge.innerHTML = "● Đang cập nhật";
+        } else {
+            badge.className = "shift-status-pill is-closed";
+            badge.innerHTML = "● Đang kết nối lại";
+        }
+    }
+}"""
+
+code = code.replace(old_sse_fn, new_sse_fn)
+
+# 4. Update the tbody mapping in renderPosOrdersTable
+old_tbody_pattern = """            return `
+                <tr class="${isCancelled ? "table-light text-muted" : ""}">
+                    <td>
+                        <div class="d-flex align-items-center gap-1">
+                            <span class="fw-bold ${isCancelled ? "text-muted text-decoration-line-through" : "text-dark"}">${escapePosHtml(ord.order_code)}</span>
+                            <span class="badge bg-light text-secondary border" style="font-size:0.65rem">Ca ${ord.shift_id}</span>
+                        </div>
+                        <div class="text-secondary" style="font-size: 0.74rem;">
+                            ${escapePosHtml(ord.note || formatDateTime(ord.created_at))}
+                        </div>
+                    </td>
+                    <td class="text-end fw-bold font-numeric">
+                        ${
+                            isCancelled
+                                ? `<span class="text-decoration-line-through text-muted">${formatVND(total)}</span>
+                                   <div class="text-danger small" style="font-size:0.68rem">Không tính sổ quỹ</div>`
+                                : formatVND(total)
+                        }
+                    </td>
+                    <td class="text-end font-numeric">
+                        ${
+                            isCancelled
+                                ? `<div class="text-muted small">—</div>`
+                                : `<div class="fw-semibold text-success">${formatVND(paid)}</div>
+                                   ${
+                                       remaining > 0
+                                           ? `<div class="text-warning small" style="font-size: 0.74rem;">Còn thiếu: <strong>${formatVND(remaining)}</strong></div>`
+                                           : `<div class="text-secondary small" style="font-size: 0.74rem;">Hoàn tất</div>`
+                                   }`
+                        }
+                    </td>
+                    <td>
+                        <div class="d-flex flex-column align-items-start gap-1">
+                            ${
+                                isCancelled
+                                    ? `<span class="fp-badge fp-badge-danger">Đã hủy (Không tính sổ quỹ)</span>`
+                                    : renderStatusBadge(ord.payment_status || "UNPAID")
+                            }
+                        </div>
+                    </td>
+                    <td class="text-end">
+                        ${
+                            isCancelled
+                                ? `<button type="button" class="btn btn-sm btn-light border text-muted py-1 px-2" disabled style="font-size: 0.75rem;">
+                                       Đã hủy đơn
+                                   </button>`
+                                : isPaid
+                                ? `<button type="button" class="btn-fp-outline py-1 px-3" style="font-size: 0.78rem;" onclick="openOrderQrModal(${ord.id}, false)">
+                                       Xem biên lai
+                                   </button>`
+                                : `<button type="button" class="btn-fp-dark py-1 px-3" style="font-size: 0.78rem;" onclick="openOrderQrModal(${ord.id}, true)">
+                                       ${getHeroicon("qr-code", "hi-icon hi-icon-sm")}
+                                       <span>${qrStatus === "ACTIVE" ? "Hiện mã QR" : "Xuất mã QR"}</span>
+                                   </button>`
+                        }
+                    </td>
+                </tr>
+            `;"""
+
+new_tbody_pattern = """            const isPartial = !isPaid && paid > 0;
+
+            return `
+                <tr class="${isCancelled ? "table-light text-muted" : ""}">
+                    <td>
+                        <div class="fw-bold ${isCancelled ? "text-muted text-decoration-line-through" : "text-dark"} font-numeric" style="font-size: 0.94rem;">
+                            ${escapePosHtml(ord.order_code)}
+                        </div>
+                        ${ord.note ? `<div class="text-secondary small mt-0.5" style="font-size: 0.75rem;">${escapePosHtml(ord.note)}</div>` : ""}
+                    </td>
+                    <td>
+                        <span class="text-secondary font-numeric" style="font-size: 0.86rem;">
+                            ${formatTimeOnly(ord.created_at)}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="fw-bold font-numeric ${isCancelled ? "text-muted text-decoration-line-through" : "text-dark"}">
+                            ${formatVND(total)}
+                        </span>
+                    </td>
+                    <td>
+                        ${
+                            isCancelled
+                                ? `<span class="text-muted font-numeric">0 ₫</span>`
+                                : isPaid
+                                ? `<span class="fw-bold text-dark font-numeric">${formatVND(total)}</span>`
+                                : isPartial
+                                ? `<div>
+                                       <span class="fw-bold text-dark font-numeric">${formatVND(paid)}</span>
+                                       <div class="text-warning small font-numeric" style="font-size: 0.74rem;">Còn ${formatVND(remaining)}</div>
+                                   </div>`
+                                : `<span class="text-secondary font-numeric">0 ₫</span>`
+                        }
+                    </td>
+                    <td>
+                        ${
+                            isCancelled
+                                ? `<span class="pos-status-pill pos-status-cancelled">Đã hủy</span>`
+                                : isPaid
+                                ? `<span class="pos-status-pill pos-status-paid">Đã thu đủ</span>`
+                                : isPartial
+                                ? `<span class="pos-status-pill pos-status-partial">Thu một phần</span>`
+                                : `<span class="pos-status-pill pos-status-unpaid">Chờ thanh toán</span>`
+                        }
+                    </td>
+                    <td class="text-end">
+                        ${
+                            isCancelled
+                                ? `<button type="button" class="btn btn-sm btn-light border text-muted py-1 px-2" disabled style="font-size: 0.75rem;">Đã hủy</button>`
+                                : isPaid
+                                ? `<button type="button" class="btn-pos-receipt" onclick="openOrderQrModal(${ord.id}, false)">
+                                       <svg class="hi-icon hi-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                           <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z"/>
+                                       </svg>
+                                       <span>Biên lai</span>
+                                   </button>`
+                                : `<button type="button" class="btn-pos-qr" onclick="openOrderQrModal(${ord.id}, true)">
+                                       ${getHeroicon("qr-code", "hi-icon hi-icon-sm")}
+                                       <span>Xuất QR</span>
+                                   </button>`
+                        }
+                    </td>
+                </tr>
+            `;"""
+
+if old_tbody_pattern in code:
+    code = code.replace(old_tbody_pattern, new_tbody_pattern)
+    print("Replaced tbody mapping successfully.")
 else:
-    print("ERROR: old_polling not found in frontend/js/pos.js")
+    print("Warning: old_tbody_pattern not found via exact match.")
+
+with open("frontend/js/pos.js", "w", encoding="utf-8") as f:
+    f.write(code)
+
+print("Updated frontend/js/pos.js successfully.")

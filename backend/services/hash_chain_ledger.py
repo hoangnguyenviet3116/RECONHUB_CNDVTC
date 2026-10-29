@@ -90,6 +90,5 @@ def add_ledger_entry(
             created_at=now_dt
         )
 
-        db.commit()
-        db.refresh(new_alloc)
+        db.flush()
         return new_alloc

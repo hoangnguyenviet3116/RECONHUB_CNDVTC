@@ -136,10 +136,16 @@ def verify_webauthn_assertion(
                 if cdata_parsed.get("type") != "webauthn.get":
                     return {
                         "verified": False,
-                        "message": "Kiểu clientDataJSON không đúng chuẩn webauthn.get.",
+                        "message": "Kiểu clientDataJSON không chuẩn webauthn.get.",
                         "biometric_verified": False
                     }
-                if cdata_parsed.get("challenge") != challenge_used:
+                client_challenge = str(cdata_parsed.get("challenge") or "").rstrip("=")
+                server_challenge_clean = str(challenge_used or "").rstrip("=")
+                # Chấp nhận khớp chuỗi Base64URL trực tiếp hoặc khớp sau khi giải mã byte
+                if (
+                    client_challenge != server_challenge_clean
+                    and parse_base64_or_json(client_challenge) != parse_base64_or_json(server_challenge_clean)
+                ):
                     return {
                         "verified": False,
                         "message": "Challenge trong clientDataJSON không khớp với challenge máy chủ.",

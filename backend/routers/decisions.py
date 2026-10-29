@@ -19,6 +19,7 @@ router = APIRouter(
 )
 
 
+@router.get("")
 @router.get("/")
 def get_decisions_history(
     db: Session = Depends(get_db),
@@ -210,6 +211,7 @@ def verify_webauthn_register(
     return result
 
 
+@router.post("")
 @router.post("/")
 def make_decision(
     decision_data: dict,

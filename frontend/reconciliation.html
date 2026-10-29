@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đối Soát Giao Dịch Lệch — VietQR ReconHub</title>
+    <title>Đối Soát & Xử Lý Chênh Lệch — VietQR ReconHub</title>
 
     <!-- Google Fonts: Be Vietnam Pro & Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -20,76 +20,71 @@
     <div id="app-navbar"></div>
 
     <main class="py-4">
-        <div class="container">
+        <div class="container shift-page-wrapper">
 
-            <!-- KHỐI LÀM VIỆC CHÍNH GỌN GÀNG THEO TAB -->
-            <section class="recon-workspace-card" data-gsap="card">
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-3 mb-3 border-bottom">
-                    <div>
-                        <div class="d-flex align-items-center gap-2 mb-1">
-                            <h1 class="h5 fw-bold mb-0">Đối Soát Giao Dịch &amp; Điều Chỉnh Sổ Quỹ</h1>
-                            <span class="fp-badge fp-badge-neutral" id="webauthn-status-badge">
-                                <span id="webauthn-status-text">Chưa kích hoạt khóa bảo mật</span>
-                            </span>
-                        </div>
-                        <p class="text-secondary small mb-0">
-                            Xử lý các khoản chuyển khoản khách quên ghi mã đơn hàng hoặc hoàn đảo các bút toán đã ghép.
-                        </p>
-                    </div>
-
-                    <div class="d-flex flex-wrap align-items-center gap-2">
-                        <button type="button" class="btn-fp-outline py-1 px-3" style="font-size: 0.82rem;" id="btn-webauthn-register">
-                            <svg class="hi-icon hi-icon-sm" viewBox="0 0 24 24" aria-hidden="true">
-                                <path d="M7.864 4.243A7.5 7.5 0 0 1 19.5 10.5c0 2.92-.556 5.709-1.568 8.268M5.742 6.364A7.465 7.465 0 0 0 4.5 10.5a7.464 7.464 0 0 1-1.15 3.993m1.989 3.559A11.209 11.209 0 0 0 8.25 10.5a3.75 3.75 0 1 1 7.5 0c0 .527-.021 1.049-.064 1.565M12 10.5a14.94 14.94 0 0 1-3.6 9.75m6.633-4.596a18.666 18.666 0 0 1-2.485 5.33" />
-                            </svg>
-                            <span>Đăng ký khóa bảo mật</span>
-                        </button>
-                        <button type="button" class="btn-fp-outline py-1 px-3" style="font-size: 0.82rem;" id="btn-recon-refresh">
-                            ↻ Làm mới
-                        </button>
-                    </div>
+            <!-- TIÊU ĐỀ TRANG THEO PHONG CÁCH MỚI -->
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4" data-gsap="card">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <span class="fp-badge fp-badge-neutral" id="webauthn-status-badge">
+                        <span id="webauthn-status-text">Chưa kích hoạt khóa bảo mật</span>
+                    </span>
+                    <button type="button" class="btn-recon-white" id="btn-webauthn-register">
+                        <svg class="hi-icon hi-icon-sm" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M7.864 4.243A7.5 7.5 0 0 1 19.5 10.5c0 2.92-.556 5.709-1.568 8.268M5.742 6.364A7.465 7.465 0 0 0 4.5 10.5a7.464 7.464 0 0 1-1.15 3.993m1.989 3.559A11.209 11.209 0 0 0 8.25 10.5a3.75 3.75 0 1 1 7.5 0c0 .527-.021 1.049-.064 1.565M12 10.5a14.94 14.94 0 0 1-3.6 9.75m6.633-4.596a18.666 18.666 0 0 1-2.485 5.33" />
+                        </svg>
+                        <span>Đăng ký khóa bảo mật</span>
+                    </button>
+                    <button type="button" class="btn-recon-white" id="btn-recon-refresh">
+                        <svg class="hi-icon hi-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                        </svg>
+                        <span>Đồng bộ ngân hàng</span>
+                    </button>
                 </div>
+            </div>
 
-                <!-- Thanh chuyển đổi 3 Tab nghiệp vụ -->
-                <ul class="nav nav-pills gap-2 mb-3" id="reconTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active fw-semibold small py-2 px-3" id="tab-unmatched-btn" data-bs-toggle="pill" data-bs-target="#pane-unmatched" type="button" role="tab">
-                            Khoản tiền chờ xử lý
-                            <span class="badge bg-danger text-white rounded-pill ms-1" id="badge-unmatched-count">1</span>
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link fw-semibold small py-2 px-3" id="tab-allocated-btn" data-bs-toggle="pill" data-bs-target="#pane-allocated" type="button" role="tab">
-                            Các khoản đã khớp &amp; Hoàn đảo
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link fw-semibold small py-2 px-3" id="tab-history-btn" data-bs-toggle="pill" data-bs-target="#pane-history" type="button" role="tab">
-                            Lịch sử phê duyệt
-                        </button>
-                    </li>
-                </ul>
+            <!-- THANH ĐIỀU HƯỚNG DẠNG VIÊN THUỐC (PILL TABS) -->
+            <div class="mb-4">
+                <div class="recon-pill-nav" id="reconTabs" role="tablist">
+                    <button class="nav-link active" id="tab-unmatched-btn" data-bs-toggle="pill" data-bs-target="#pane-unmatched" type="button" role="tab">
+                        <span>Khoản tiền chờ xử lý</span>
+                        <span class="badge" style="background:#ef4444; color:#fff; border-radius:9999px; font-size:0.75rem; padding: 2px 7px;" id="badge-unmatched-count">0</span>
+                    </button>
+                    <button class="nav-link" id="tab-allocated-btn" data-bs-toggle="pill" data-bs-target="#pane-allocated" type="button" role="tab">
+                        <span>Đã ghép</span>
+                    </button>
+                    <button class="nav-link" id="tab-history-btn" data-bs-toggle="pill" data-bs-target="#pane-history" type="button" role="tab">
+                        <span>Lịch sử phê duyệt</span>
+                    </button>
+                </div>
+            </div>
 
-                <!-- Nội dung từng Tab -->
-                <div class="tab-content">
+            <!-- NỘI DUNG TỪNG TAB TRONG THẺ CARD -->
+            <div class="tab-content" id="reconTabContent">
 
-                    <!-- TAB 1: DANH SÁCH GIAO DỊCH CHỜ XỬ LÝ -->
-                    <div class="tab-pane fade show active" id="pane-unmatched" role="tabpanel">
+                <!-- TAB 1: KHOẢN TIỀN CHỜ XỬ LÝ -->
+                <div class="tab-pane fade show active" id="pane-unmatched" role="tabpanel">
+                    <div class="recon-main-card">
+                        <div class="recon-main-card-header">
+                            <div class="d-flex align-items-center gap-2">
+                                <h2 class="h6 fw-bold mb-0 text-dark">Giao dịch cần xử lý</h2>
+                                <span class="badge-recon-warning" id="unmatched-todo-pill">0 việc cần làm</span>
+                            </div>
+                        </div>
                         <div class="table-responsive">
-                            <table class="fp-table">
+                            <table class="recon-table">
                                 <thead>
                                     <tr>
-                                        <th>Mã giao dịch</th>
-                                        <th>Nội dung chuyển khoản</th>
-                                        <th class="text-end">Tổng tiền nhận</th>
-                                        <th class="text-end">Số tiền chờ xử lý</th>
-                                        <th>Trạng thái</th>
-                                        <th class="text-end">Thao tác</th>
+                                        <th style="width: 20%;">GIAO DỊCH</th>
+                                        <th style="width: 32%;">NỘI DUNG CHUYỂN KHOẢN</th>
+                                        <th style="width: 16%;">VẤN ĐỀ</th>
+                                        <th style="width: 18%;">SỐ TIỀN CHƯA PHÂN BỔ</th>
+                                        <th style="width: 14%; text-align: right;"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="recon-unmatched-tbody">
                                     <tr>
-                                        <td colspan="6" class="text-center py-4 text-secondary">
+                                        <td colspan="5" class="text-center py-4 text-secondary">
                                             Đang tải danh sách giao dịch...
                                         </td>
                                     </tr>
@@ -97,24 +92,31 @@
                             </table>
                         </div>
                     </div>
+                </div>
 
-                    <!-- TAB 2: CÁC KHOẢN ĐÃ KHỚP & HOÀN ĐẢO -->
-                    <div class="tab-pane fade" id="pane-allocated" role="tabpanel">
+                <!-- TAB 2: ĐÃ GHÉP -->
+                <div class="tab-pane fade" id="pane-allocated" role="tabpanel">
+                    <div class="recon-main-card">
+                        <div class="recon-main-card-header">
+                            <div>
+                                <h2 class="h6 fw-bold mb-0 text-dark">Các khoản đã ghép</h2>
+                                <div class="text-secondary small mt-1">Dữ liệu đối soát được cập nhật theo thời gian thực.</div>
+                            </div>
+                        </div>
                         <div class="table-responsive">
-                            <table class="fp-table">
+                            <table class="recon-table">
                                 <thead>
                                     <tr>
-                                        <th>Mã bút toán</th>
-                                        <th>Giao dịch chuyển khoản</th>
-                                        <th>Hóa đơn nhận tiền</th>
-                                        <th>Loại ghi nhận</th>
-                                        <th class="text-end">Số tiền</th>
-                                        <th class="text-end">Điều chỉnh</th>
+                                        <th style="width: 25%;">GIAO DỊCH</th>
+                                        <th style="width: 30%;">HÓA ĐƠN</th>
+                                        <th style="width: 20%;">SỐ TIỀN GHÉP</th>
+                                        <th style="width: 15%;">NGƯỜI XỬ LÝ</th>
+                                        <th style="width: 10%; text-align: right;"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="recon-allocations-tbody">
                                     <tr>
-                                        <td colspan="6" class="text-center py-4 text-secondary">
+                                        <td colspan="5" class="text-center py-4 text-secondary">
                                             Đang tải danh sách bút toán...
                                         </td>
                                     </tr>
@@ -122,25 +124,47 @@
                             </table>
                         </div>
                     </div>
+                </div>
 
-                    <!-- TAB 3: LỊCH SỬ PHÊ DUYỆT CỦA KẾ TOÁN -->
-                    <div class="tab-pane fade" id="pane-history" role="tabpanel">
-                        <div id="recon-decisions-list" class="d-flex flex-column gap-2">
-                            <div class="text-center py-4 text-secondary small">
-                                Đang tải lịch sử phê duyệt...
+                <!-- TAB 3: LỊCH SỬ PHÊ DUYỆT -->
+                <div class="tab-pane fade" id="pane-history" role="tabpanel">
+                    <div class="recon-main-card">
+                        <div class="recon-main-card-header">
+                            <div>
+                                <h2 class="h6 fw-bold mb-0 text-dark">Nhật ký phê duyệt</h2>
+                                <div class="text-secondary small mt-1">Dữ liệu đối soát được cập nhật theo thời gian thực.</div>
                             </div>
                         </div>
+                        <div class="table-responsive">
+                            <table class="recon-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 16%;">THỜI GIAN</th>
+                                        <th style="width: 18%;">NGƯỜI THỰC HIỆN</th>
+                                        <th style="width: 32%;">HÀNH ĐỘNG</th>
+                                        <th style="width: 18%;">ĐỐI TƯỢNG</th>
+                                        <th style="width: 16%;">PHƯƠNG THỨC</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recon-decisions-tbody">
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4 text-secondary">
+                                            Đang tải lịch sử phê duyệt...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div id="recon-decisions-list" class="d-none"></div>
+                        </div>
                     </div>
-
                 </div>
-            </section>
+
+            </div>
 
         </div>
     </main>
 
-    <!-- =======================================================================
-         HỘP THOẠI 1: GHÉP KHOẢN TIỀN VÀO HÓA ĐƠN (KHI BẤM NÚT TRÊN DÒNG)
-         ======================================================================= -->
+    <!-- HỘP THOẠI 1: GHÉP KHOẢN TIỀN VÀO HÓA ĐƠN -->
     <div class="modal fade" id="manualMatchModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 18px;">
@@ -156,19 +180,18 @@
                     <form id="form-manual-match" novalidate>
                         <input type="hidden" id="match-tx-id">
 
-                        <!-- Tóm tắt khoản tiền đang chọn -->
                         <div class="p-3 rounded-3 bg-light border small mb-3">
                             <div class="d-flex justify-content-between py-1 border-bottom">
                                 <span class="text-secondary">Mã giao dịch ngân hàng:</span>
-                                <strong id="match-tx-code" class="font-numeric">FT2629400103</strong>
+                                <strong id="match-tx-code" class="font-numeric">—</strong>
                             </div>
                             <div class="d-flex justify-content-between py-1 border-bottom">
                                 <span class="text-secondary">Nội dung khách ghi:</span>
-                                <strong id="match-tx-content">NGUYEN VAN A CHUYEN KHOAN</strong>
+                                <strong id="match-tx-content">—</strong>
                             </div>
                             <div class="d-flex justify-content-between pt-1">
                                 <span class="text-secondary">Số tiền chờ xử lý:</span>
-                                <strong id="match-tx-unallocated" class="text-danger fs-6 font-numeric">5.000.000 ₫</strong>
+                                <strong id="match-tx-unallocated" class="text-danger fs-6 font-numeric">0 ₫</strong>
                             </div>
                         </div>
 
@@ -211,9 +234,7 @@
         </div>
     </div>
 
-    <!-- =======================================================================
-         HỘP THOẠI: PHƯƠNG THỨC XỬ LÝ (KHI BẤM NÚT XỬ LÝ TRÊN GIAO DỊCH CHUYỂN THỪA)
-         ======================================================================= -->
+    <!-- HỘP THOẠI: PHƯƠNG THỨC XỬ LÝ TIỀN THỪA -->
     <div class="modal fade" id="overpaymentModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 18px;">
@@ -230,7 +251,6 @@
                         <input type="hidden" id="ovp-tx-id">
                         <input type="hidden" id="ovp-order-id">
 
-                        <!-- Thông tin giao dịch chuyển thừa -->
                         <div class="p-3 rounded-3 bg-light border small mb-3">
                             <div class="d-flex justify-content-between py-1 border-bottom">
                                 <span class="text-secondary">Mã giao dịch ngân hàng:</span>
@@ -281,9 +301,7 @@
         </div>
     </div>
 
-    <!-- =======================================================================
-         HỘP THOẠI 2: ĐẢO / HỦY KHOẢN TIỀN ĐÃ GHÉP (KHI BẤM NÚT ĐẢO GIAO DỊCH)
-         ======================================================================= -->
+    <!-- HỘP THOẠI 2: ĐẢO GIAO DỊCH ĐÃ KHỚP -->
     <div class="modal fade" id="reverseAllocModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 18px;">
@@ -302,11 +320,11 @@
                         <div class="p-3 rounded-3 bg-light border small mb-3">
                             <div class="d-flex justify-content-between py-1 border-bottom">
                                 <span class="text-secondary">Bút toán cần đảo:</span>
-                                <strong id="reverse-alloc-label">Bút toán #1</strong>
+                                <strong id="reverse-alloc-label">—</strong>
                             </div>
                             <div class="d-flex justify-content-between pt-1">
                                 <span class="text-secondary">Số tiền hoàn lại chờ xử lý:</span>
-                                <strong id="reverse-alloc-amount" class="text-danger fs-6 font-numeric">35.000.000 ₫</strong>
+                                <strong id="reverse-alloc-amount" class="text-danger fs-6 font-numeric">30 ₫</strong>
                             </div>
                         </div>
 

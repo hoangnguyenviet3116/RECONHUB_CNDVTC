@@ -18,6 +18,7 @@ SET NOCOUNT ON;
 BEGIN TRANSACTION;
 
 -- 1. XÓA SẠCH DỮ LIỆU CŨ & RESET BỘ ĐẾM IDENTITY VỀ 1 (ĐỂ DEMO LẠI NHIỀU LẦN)
+DELETE FROM dbo.shift_audits;
 DELETE FROM dbo.decisions;
 DELETE FROM dbo.payment_allocations;
 DELETE FROM dbo.bank_transactions;
@@ -29,6 +30,7 @@ DELETE FROM dbo.merchants;
 DELETE FROM dbo.users;
 
 --đặt lại giá trị tự tăng (IDENTITY) của các bảng trong SQL Server về 0
+DBCC CHECKIDENT ('dbo.shift_audits', RESEED, 0);
 DBCC CHECKIDENT ('dbo.decisions', RESEED, 0);
 DBCC CHECKIDENT ('dbo.payment_allocations', RESEED, 0);
 DBCC CHECKIDENT ('dbo.bank_transactions', RESEED, 0);

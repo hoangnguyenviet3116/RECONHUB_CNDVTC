@@ -21,6 +21,8 @@ class ShiftResponse(ShiftBase):
     id: int
     status: ShiftStatus
     closed_at: Optional[datetime] = None
+    is_archived: bool = False
+    archived_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

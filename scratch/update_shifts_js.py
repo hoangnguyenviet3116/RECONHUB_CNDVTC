@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-"""
-Update frontend/js/shifts.js to support shift end-time, manual close button, confirmation modal, and auto-refresh.
-"""
 
 new_shifts_js = """// ==========================================================================
-// QUẢN LÝ CA BÁN HÀNG (frontend/js/shifts.js)
+// QUẢN LÝ CA BÁN HÀNG — VIETQR RECONHUB (frontend/js/shifts.js)
+// Giao diện phong cách Fintech SaaS Hiện đại (Chuẩn Thẻ Nằm Ngang & Form Nhanh)
 // ==========================================================================
 
 let currentShiftsList = [];
+let shiftsSummaryMap = {};
+let currentStatusFilter = "ALL";
 let isSubmittingShift = false;
 let isClosingShift = false;
 let pendingShiftIdToClose = null;
@@ -31,6 +31,14 @@ function initShiftsPage() {
         confirmCloseBtn.addEventListener("click", handleConfirmCloseShift);
     }
 
+    const filterSelect = document.getElementById("filter-shift-status");
+    if (filterSelect) {
+        filterSelect.addEventListener("change", (e) => {
+            currentStatusFilter = e.target.value;
+            renderShiftsList(currentShiftsList);
+        });
+    }
+
     loadShifts(false);
     startShiftsPolling();
 }
@@ -38,17 +46,24 @@ function initShiftsPage() {
 function setDefaultShiftFormTimes() {
     const startInput = document.getElementById("shift-start-time");
     const endInput = document.getElementById("shift-end-time");
-    if (!startInput || !endInput) return;
+    const nameInput = document.getElementById("shift-name");
 
     const now = new Date();
-    const later = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+    const later = new Date(now.getTime() + 6 * 60 * 60 * 1000);
     const toLocalISO = (d) => {
         const pad = (n) => String(n).padStart(2, "0");
         return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     };
 
-    startInput.value = toLocalISO(now);
-    endInput.value = toLocalISO(later);
+    if (startInput && !startInput.value) startInput.value = toLocalISO(now);
+    if (endInput && !endInput.value) endInput.value = toLocalISO(later);
+
+    if (nameInput && (!nameInput.value || nameInput.value.includes("24/10/2026"))) {
+        const dayNames = ["Chủ nhật", "Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy"];
+        const h = now.getHours();
+        const period = h < 12 ? "Ca sáng" : (h < 18 ? "Ca chiều" : "Ca tối");
+        nameInput.value = `${period} — ${dayNames[now.getDay()]}`;
+    }
 }
 
 function startShiftsPolling() {
@@ -68,11 +83,61 @@ async function loadShifts(showNotification = false) {
         currentShiftsList = store.shifts || [];
     }
 
+    // Tải số liệu doanh thu và số đơn tương ứng của từng ca từ dashboard summary
+    await fetchShiftsSummaryStats();
+
     renderActiveShiftHero(currentShiftsList);
     renderShiftsList(currentShiftsList);
 
     if (showNotification) {
         showToast("Đã cập nhật danh sách ca bán hàng mới nhất.", "success");
+    }
+}
+
+async function fetchShiftsSummaryStats() {
+    shiftsSummaryMap = {};
+    try {
+        const summaryData = await apiRequest("/dashboard/summary?shift_id=ALL");
+        if (summaryData && Array.isArray(summaryData.orders)) {
+            const orders = summaryData.orders;
+            (currentShiftsList || []).forEach((s) => {
+                const sOrders = orders.filter((o) => Number(o.shift_id) === Number(s.id));
+                const validOrders = sOrders.filter(
+                    (o) => !["CANCELLED_ORDER"].includes(String(o.order_status || o.status || "").toUpperCase())
+                );
+                const rev = validOrders.reduce((sum, o) => {
+                    const isPaid = String(o.payment_status).toUpperCase() === "PAID";
+                    const paidAmount = Number(o.paid_amount || o.allocated_amount || 0);
+                    return sum + (isPaid ? Number(o.total_amount || 0) : paidAmount);
+                }, 0);
+
+                shiftsSummaryMap[s.id] = {
+                    orderCount: validOrders.length,
+                    revenue: rev
+                };
+            });
+        }
+    } catch (_) {
+        try {
+            const store = getDemoStore();
+            const orders = store.orders || [];
+            (currentShiftsList || []).forEach((s) => {
+                const sOrders = orders.filter((o) => Number(o.shift_id) === Number(s.id));
+                const validOrders = sOrders.filter(
+                    (o) => !["CANCELLED_ORDER"].includes(String(o.order_status || "").toUpperCase())
+                );
+                const rev = validOrders.reduce((sum, o) => {
+                    const isPaid = String(o.payment_status).toUpperCase() === "PAID";
+                    const paidAmount = Number(o.paid_amount || 0);
+                    return sum + (isPaid ? Number(o.total_amount || 0) : paidAmount);
+                }, 0);
+
+                shiftsSummaryMap[s.id] = {
+                    orderCount: validOrders.length,
+                    revenue: rev
+                };
+            });
+        } catch (e) {}
     }
 }
 
@@ -84,109 +149,150 @@ function renderActiveShiftHero(shifts) {
 
     if (!openShift) {
         bannerEl.innerHTML = `
-            <div class="recon-workspace-card text-center py-4">
-                <span class="fp-badge fp-badge-warning mb-2">Chưa mở ca</span>
-                <h1 class="h5 fw-bold mb-2">Hiện chưa có ca bán hàng nào đang mở</h1>
-                <p class="text-secondary small mb-3">Vui lòng mở ca làm việc mới để nhân viên có thể tạo đơn hàng tại Quầy thu ngân.</p>
-                <button type="button" class="btn-fp-dark" data-bs-toggle="modal" data-bs-target="#openShiftModal">
-                    + Mở ca bán hàng mới
-                </button>
+            <div class="alert alert-light border py-3 px-4 rounded-4 small text-secondary d-flex align-items-center gap-3 mb-4" style="background:#ffffff; border-color:#eef2f6 !important;">
+                <span style="font-size: 1.25rem;">💡</span>
+                <div>
+                    <strong class="text-dark">Chưa có ca làm việc nào đang mở.</strong>
+                    <span>Bạn hãy nhập thông tin ở ô trên và nhấn <strong>Tạo ca mới</strong> để nhân viên có thể bắt đầu tạo đơn tại quầy.</span>
+                </div>
+            </div>
+        `;
+    } else {
+        // Nếu đã có ca đang mở, ca này sẽ hiển thị nổi bật ở vị trí đầu danh sách bên dưới (với viền xanh lá đặc trưng)
+        bannerEl.innerHTML = "";
+    }
+}
+
+function renderShiftsList(shifts) {
+    const container = document.getElementById("shifts-container");
+    const countLabel = document.getElementById("shifts-count-label");
+    if (!container) return;
+
+    const totalCount = (shifts || []).length;
+    if (countLabel) {
+        countLabel.textContent = `${totalCount} ca gần nhất`;
+    }
+
+    if (!shifts || shifts.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-5 text-secondary bg-white rounded-4 border">
+                Chưa có ca làm việc nào trong hệ thống. Hãy tạo ca đầu tiên ở trên!
             </div>
         `;
         return;
     }
 
-    bannerEl.innerHTML = `
-        <div class="recon-workspace-card" style="background: linear-gradient(135deg, #ffffff 0%, #ecfdf5 100%); border: 1.5px solid #10b981;">
-            <div class="row align-items-center g-3">
-                <div class="col-12 col-lg-7">
-                    <div class="d-flex align-items-center gap-2 mb-2">
-                        <span class="fp-badge fp-badge-success">● Ca đang mở bán</span>
-                        <span class="small text-secondary">Mã ca #${openShift.id}</span>
-                    </div>
-                    <h1 class="h4 fw-bold mb-1 text-dark">${escapeHtml(openShift.name)}</h1>
-                    <div class="text-secondary small mt-2">
-                        <div>Bắt đầu: <strong class="text-dark">${formatDateTime(openShift.start_time)}</strong> • Kết thúc dự kiến: <strong class="text-primary">${formatDateTime(openShift.end_time)}</strong></div>
-                        <div class="mt-1">Mục tiêu doanh thu: <strong class="text-dark font-numeric">${formatVND(openShift.target_revenue)}</strong></div>
-                    </div>
-                </div>
-                <div class="col-12 col-lg-5 text-lg-end d-flex flex-wrap gap-2 justify-content-lg-end">
-                    <a href="pos.html?shift_id=${openShift.id}" class="btn-fp-success py-2 px-3" style="font-size:0.86rem;">
-                        <span>Mở quầy thu ngân</span>
-                        ${getHeroicon("arrow-right", "hi-icon")}
-                    </a>
-                    <button type="button" class="btn-fp-danger py-2 px-3" style="font-size:0.86rem;" onclick="openCloseShiftConfirmModal(${openShift.id})">
-                        <span>Đóng ca làm việc</span>
-                    </button>
-                </div>
+    // Lọc theo trạng thái
+    let filtered = [...shifts];
+    if (currentStatusFilter === "OPEN") {
+        filtered = filtered.filter((s) => String(s.status).toUpperCase() === "OPEN");
+    } else if (currentStatusFilter === "CLOSED") {
+        filtered = filtered.filter((s) => String(s.status).toUpperCase() === "CLOSED");
+    }
+
+    if (filtered.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-5 text-secondary bg-white rounded-4 border">
+                Không tìm thấy ca làm việc nào phù hợp với bộ lọc "${currentStatusFilter === "OPEN" ? "Đang mở" : "Đã đóng"}".
             </div>
-        </div>
-    `;
-}
-
-function renderShiftsList(shifts) {
-    const container = document.getElementById("shifts-container");
-    if (!container) return;
-
-    if (!shifts || shifts.length === 0) {
-        container.innerHTML = `<div class="col-12 text-center py-4 text-secondary">Chưa có ca làm việc nào.</div>`;
+        `;
         return;
     }
 
-    container.innerHTML = shifts
+    container.innerHTML = filtered
         .map((shift) => {
             const isOpen = String(shift.status).toUpperCase() === "OPEN";
-            const isClosed = String(shift.status).toUpperCase() === "CLOSED";
+            const stats = shiftsSummaryMap[shift.id] || { orderCount: 0, revenue: 0 };
+            const targetRev = Number(shift.target_revenue || 15000000);
+            const rev = stats.revenue;
+            const orderCount = stats.orderCount;
+            const pct = targetRev > 0 ? Math.min(100, Math.round((rev / targetRev) * 100)) : 0;
+
+            const shiftCode = `CA-${String(shift.id).padStart(4, "0")}`;
+            const timeRange = formatShiftRangeTime(shift.start_time, shift.end_time);
 
             return `
-                <div class="col-12 col-md-6">
-                    <div class="kpi-metric-card ${isOpen ? "kpi-border-emerald" : "kpi-border-cyan bg-light"}">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="small text-secondary fw-semibold">Mã ca #${shift.id}</span>
-                            ${renderStatusBadge(shift.status)}
+                <div class="shift-row-card ${isOpen ? "is-open" : "is-closed"}">
+                    <!-- Cột 1: Icon + Tên ca + Badge Trạng thái + Mã & Giờ -->
+                    <div class="shift-col-info">
+                        <div class="shift-icon-box ${isOpen ? "is-open" : "is-closed"}">
+                            ${isOpen ? getHeroicon("clock", "hi-icon") : getHeroicon("lock-closed", "hi-icon")}
                         </div>
-                        <h3 class="h6 fw-bold mb-2 text-dark">${escapeHtml(shift.name)}</h3>
-                        <div class="small text-secondary mb-3">
-                            <div>Mục tiêu doanh thu: <strong class="text-dark font-numeric">${formatVND(shift.target_revenue)}</strong></div>
-                            <div class="mt-1">Bắt đầu: <strong>${formatDateTime(shift.start_time)}</strong></div>
-                            <div>Kết thúc dự kiến: <strong class="${isOpen ? "text-primary" : "text-dark"}">${formatDateTime(shift.end_time)}</strong></div>
-                            ${
-                                shift.closed_at
-                                    ? `<div class="text-danger mt-1">Đã đóng thực tế lúc: <strong>${formatDateTime(shift.closed_at)}</strong></div>`
-                                    : ""
-                            }
-                        </div>
-                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 pt-2 border-top">
-                            <button type="button" class="btn-fp-outline py-1 px-2" style="font-size:0.78rem;" onclick="viewShiftDetail(${shift.id})">
-                                Chi tiết ca
-                            </button>
-                            <div class="d-flex gap-1">
-                                ${
-                                    isOpen
-                                        ? `
-                                            <a href="pos.html?shift_id=${shift.id}" class="btn-fp-dark py-1 px-2" style="font-size:0.78rem;">
-                                                Quầy thu ngân →
-                                            </a>
-                                            <button type="button" class="btn-fp-danger py-1 px-2" style="font-size:0.78rem;" onclick="openCloseShiftConfirmModal(${shift.id})">
-                                                Đóng ca
-                                            </button>
-                                        `
-                                        : `
-                                            <a href="dashboard.html?shift_id=${shift.id}" class="btn-fp-outline py-1 px-2" style="font-size:0.78rem;">
-                                                Báo cáo ca
-                                            </a>
-                                            <button type="button" class="btn btn-sm btn-light border text-muted py-1 px-2" disabled style="font-size:0.75rem;">
-                                                Đã đóng ca
-                                            </button>
-                                        `
-                                }
+                        <div class="min-w-0">
+                            <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                                <h3 class="shift-name mb-0 text-dark">${escapeHtml(shift.name)}</h3>
+                                <span class="shift-status-pill ${isOpen ? "is-open" : "is-closed"}">
+                                    ● ${isOpen ? "Đang mở" : "Đã đóng"}
+                                </span>
+                            </div>
+                            <div class="shift-code-time">
+                                ${shiftCode} &nbsp;•&nbsp; ${timeRange}
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Cột 2: Doanh thu -->
+                    <div class="shift-col-metric">
+                        <span class="shift-metric-label">Doanh thu</span>
+                        <div class="shift-metric-value font-numeric">${formatVND(rev)}</div>
+                        <span class="shift-metric-sub">${pct}% mục tiêu</span>
+                    </div>
+
+                    <!-- Cột 3: Đơn hàng -->
+                    <div class="shift-col-metric">
+                        <span class="shift-metric-label">Đơn hàng</span>
+                        <div class="shift-metric-value font-numeric">${orderCount}</div>
+                        <span class="shift-metric-sub">đơn hợp lệ</span>
+                    </div>
+
+                    <!-- Cột 4: Tiến độ -->
+                    <div class="shift-col-progress">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="shift-metric-label mb-0">Tiến độ</span>
+                            <span class="shift-progress-percent font-numeric">${pct}%</span>
+                        </div>
+                        <div class="shift-progress-track">
+                            <div class="shift-progress-fill" style="width: ${pct}%;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Cột 5: Nút hành động -->
+                    <div class="shift-col-actions">
+                        <a href="pos.html?shift_id=${shift.id}" class="btn-shift-action-pos" title="Đến quầy thu ngân của ca này">
+                            <span>→ Đến quầy thu ngân</span>
+                        </a>
+                        ${
+                            isOpen
+                                ? `
+                            <button type="button" class="btn-shift-action-close" onclick="openCloseShiftConfirmModal(${shift.id})" title="Đóng ca và niêm phong Merkle Root">
+                                ${getHeroicon("lock-closed", "hi-icon")}
+                                <span>Đóng ca</span>
+                            </button>
+                        `
+                                : `
+                            <a href="dashboard.html?shift_id=${shift.id}" class="btn-shift-action-detail" title="Xem báo cáo đối soát &amp; sổ quỹ ca">
+                                <span>Báo cáo ca</span>
+                            </a>
+                            <button type="button" class="btn-shift-action-detail" onclick="viewShiftDetail(${shift.id})" title="Xem chi tiết bút toán">
+                                <span>Chi tiết</span>
+                            </button>
+                        `
+                        }
                     </div>
                 </div>
             `;
         })
         .join("");
+}
+
+function formatShiftRangeTime(startTime, endTime) {
+    if (!startTime) return "--:--";
+    const pad = (n) => String(n).padStart(2, "0");
+    const d1 = new Date(startTime);
+    const d2 = endTime ? new Date(endTime) : null;
+    const t1 = `${pad(d1.getHours())}:${pad(d1.getMinutes())}`;
+    const t2 = d2 ? `${pad(d2.getHours())}:${pad(d2.getMinutes())}` : "--:--";
+    return `${t1} - ${t2}`;
 }
 
 function openCloseShiftConfirmModal(shiftId) {
@@ -236,7 +342,7 @@ async function handleConfirmCloseShift() {
         const modalEl = document.getElementById("confirmCloseShiftModal");
         if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
 
-        showToast("Đã đóng ca làm việc thành công. Quầy thu ngân đã bị vô hiệu hóa.", "success");
+        showToast("Đã đóng ca và niêm phong Cây Merkle thành công. Quầy thu ngân đã khóa nhận đơn mới.", "success");
         loadShifts(false);
     } catch (err) {
         isClosingShift = false;
@@ -249,13 +355,22 @@ async function handleConfirmCloseShift() {
     }
 }
 
-function viewShiftDetail(shiftId) {
+async function viewShiftDetail(shiftId) {
     const shift = currentShiftsList.find((s) => Number(s.id) === Number(shiftId)) || currentShiftsList[0];
-    const store = getDemoStore();
-    const summary = computeStoreSummary(store, shift ? shift.id : null);
-
     const bodyEl = document.getElementById("shift-detail-body");
     if (!bodyEl || !shift) return;
+
+    bodyEl.innerHTML = `<div class="text-center py-4 text-secondary small">Đang tải số liệu đối soát của ca...</div>`;
+    const modalEl = document.getElementById("shiftDetailModal");
+    if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+
+    let summary = null;
+    try {
+        summary = await apiRequest(`/dashboard/summary?shift_id=${encodeURIComponent(shift.id)}`);
+    } catch (_) {
+        const store = getDemoStore();
+        summary = computeStoreSummary(store, shift.id);
+    }
 
     bodyEl.innerHTML = `
         <div class="mb-3">
@@ -275,7 +390,7 @@ function viewShiftDetail(shiftId) {
             </div>
             <div class="d-flex justify-content-between py-1 border-bottom">
                 <span class="text-secondary">Tổng hóa đơn hợp lệ:</span>
-                <strong class="text-primary font-numeric">${formatVND(summary.valid_order_total)}</strong>
+                <strong class="text-primary font-numeric">${formatVND(summary.valid_order_total)} (${summary.valid_order_count ?? 0} đơn)</strong>
             </div>
             <div class="d-flex justify-content-between py-1 border-bottom">
                 <span class="text-secondary">Đã thu khớp đơn:</span>
@@ -287,9 +402,6 @@ function viewShiftDetail(shiftId) {
             </div>
         </div>
     `;
-
-    const modalEl = document.getElementById("shiftDetailModal");
-    if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
 }
 
 async function handleCreateShiftSubmit(event) {
@@ -395,4 +507,4 @@ function escapeHtml(str) {
 with open("frontend/js/shifts.js", "w", encoding="utf-8") as f:
     f.write(new_shifts_js)
 
-print("Updated frontend/js/shifts.js successfully")
+print("Updated frontend/js/shifts.js successfully.")

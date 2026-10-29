@@ -1,3 +1,10 @@
+
+function formatTimeOnly(dateStr) {
+    if (!dateStr) return "--:--";
+    const d = new Date(dateStr);
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 // ==========================================================================
 // QUẦY THU NGÂN & PHÁT HÀNH MÃ VIETQR ĐỘNG (frontend/js/pos.js)
 // ==========================================================================
@@ -188,8 +195,23 @@ function updatePosShiftLockState() {
     isCurrentShiftLocked = isLocked;
 
     if (badgeEl) {
-        badgeEl.className = badgeClass;
-        badgeEl.textContent = badgeText;
+        if (!isLocked) {
+            badgeEl.className = "shift-status-pill is-open";
+            badgeEl.textContent = "● Ca đang hoạt động";
+        } else {
+            badgeEl.className = "shift-status-pill is-closed";
+            badgeEl.textContent = "● " + badgeText;
+        }
+    }
+
+    const headerShiftName = document.getElementById("pos-header-shift-name");
+    if (headerShiftName) {
+        if (shift) {
+            const shiftCode = `CA-${String(shift.id).padStart(4, "0")}`;
+            headerShiftName.textContent = `${shift.name} • ${shiftCode}`;
+        } else {
+            headerShiftName.textContent = "Tất cả ca bán hàng";
+        }
     }
 
     if (alertBox) {
@@ -395,11 +417,11 @@ function updateSseStatusBadge(isConnected) {
     const badge = document.getElementById("pos-sse-status-badge");
     if (badge) {
         if (isConnected) {
-            badge.className = "badge bg-success-subtle text-success border border-success-subtle d-inline-flex align-items-center gap-1";
-            badge.innerHTML = '<span class="spinner-grow spinner-grow-sm text-success" style="width:6px;height:6px;" role="status"></span> Real-time SSE';
+            badge.className = "shift-status-pill is-open";
+            badge.innerHTML = "● Đang cập nhật";
         } else {
-            badge.className = "badge bg-warning-subtle text-warning border border-warning-subtle d-inline-flex align-items-center gap-1";
-            badge.innerHTML = '● Đang kết nối lại';
+            badge.className = "shift-status-pill is-closed";
+            badge.innerHTML = "● Đang kết nối lại";
         }
     }
 }
@@ -453,7 +475,7 @@ function renderPosOrdersTable(orders) {
     const tbody = document.getElementById("pos-orders-tbody");
     if (!tbody) return;
 
-    const shiftFilterVal = document.getElementById("pos-filter-shift")?.value || "1";
+    const shiftFilterVal = document.getElementById("pos-shift-select")?.value || document.getElementById("pos-filter-shift")?.value || "ALL";
     const filterVal = document.getElementById("pos-filter-payment")?.value || "ALL";
     const searchVal = (document.getElementById("pos-search-order")?.value || "").trim().toUpperCase();
 
@@ -504,7 +526,7 @@ function renderPosOrdersTable(orders) {
     if (filtered.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="5" class="text-center py-4 text-secondary">
+                <td colspan="6" class="text-center py-4 text-secondary">
                     Chưa có hóa đơn nào phù hợp với bộ lọc.
                 </td>
             </tr>
@@ -526,59 +548,65 @@ function renderPosOrdersTable(orders) {
             const qrStatus = qrObj ? qrObj.status : (ord.qr_status || "UNISSUED");
             const isPaid = String(ord.payment_status || "").toUpperCase() === "PAID";
 
+            const isPartial = !isPaid && paid > 0;
+
             return `
                 <tr class="${isCancelled ? "table-light text-muted" : ""}">
                     <td>
-                        <div class="d-flex align-items-center gap-1">
-                            <span class="fw-bold ${isCancelled ? "text-muted text-decoration-line-through" : "text-dark"}">${escapePosHtml(ord.order_code)}</span>
-                            <span class="badge bg-light text-secondary border" style="font-size:0.65rem">Ca ${ord.shift_id}</span>
+                        <div class="fw-bold ${isCancelled ? "text-muted text-decoration-line-through" : "text-dark"} font-numeric" style="font-size: 0.94rem;">
+                            ${escapePosHtml(ord.order_code)}
                         </div>
-                        <div class="text-secondary" style="font-size: 0.74rem;">
-                            ${escapePosHtml(ord.note || formatDateTime(ord.created_at))}
-                        </div>
+                        ${ord.note ? `<div class="text-secondary small mt-0.5" style="font-size: 0.75rem;">${escapePosHtml(ord.note)}</div>` : ""}
                     </td>
-                    <td class="text-end fw-bold font-numeric">
+                    <td>
+                        <span class="text-secondary font-numeric" style="font-size: 0.86rem;">
+                            ${formatTimeOnly(ord.created_at)}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="fw-bold font-numeric ${isCancelled ? "text-muted text-decoration-line-through" : "text-dark"}">
+                            ${formatVND(total)}
+                        </span>
+                    </td>
+                    <td>
                         ${
                             isCancelled
-                                ? `<span class="text-decoration-line-through text-muted">${formatVND(total)}</span>
-                                   <div class="text-danger small" style="font-size:0.68rem">Không tính sổ quỹ</div>`
-                                : formatVND(total)
-                        }
-                    </td>
-                    <td class="text-end font-numeric">
-                        ${
-                            isCancelled
-                                ? `<div class="text-muted small">—</div>`
-                                : `<div class="fw-semibold text-success">${formatVND(paid)}</div>
-                                   ${
-                                       remaining > 0
-                                           ? `<div class="text-warning small" style="font-size: 0.74rem;">Còn thiếu: <strong>${formatVND(remaining)}</strong></div>`
-                                           : `<div class="text-secondary small" style="font-size: 0.74rem;">Hoàn tất</div>`
-                                   }`
+                                ? `<span class="text-muted font-numeric">0 ₫</span>`
+                                : isPaid
+                                ? `<span class="fw-bold text-dark font-numeric">${formatVND(total)}</span>`
+                                : isPartial
+                                ? `<div>
+                                       <span class="fw-bold text-dark font-numeric">${formatVND(paid)}</span>
+                                       <div class="text-warning small font-numeric" style="font-size: 0.74rem;">Còn ${formatVND(remaining)}</div>
+                                   </div>`
+                                : `<span class="text-secondary font-numeric">0 ₫</span>`
                         }
                     </td>
                     <td>
-                        <div class="d-flex flex-column align-items-start gap-1">
-                            ${
-                                isCancelled
-                                    ? `<span class="fp-badge fp-badge-danger">Đã hủy (Không tính sổ quỹ)</span>`
-                                    : renderStatusBadge(ord.payment_status || "UNPAID")
-                            }
-                        </div>
+                        ${
+                            isCancelled
+                                ? `<span class="pos-status-pill pos-status-cancelled">Đã hủy</span>`
+                                : isPaid
+                                ? `<span class="pos-status-pill pos-status-paid">Đã thu đủ</span>`
+                                : isPartial
+                                ? `<span class="pos-status-pill pos-status-partial">Thu một phần</span>`
+                                : `<span class="pos-status-pill pos-status-unpaid">Chờ thanh toán</span>`
+                        }
                     </td>
                     <td class="text-end">
                         ${
                             isCancelled
-                                ? `<button type="button" class="btn btn-sm btn-light border text-muted py-1 px-2" disabled style="font-size: 0.75rem;">
-                                       Đã hủy đơn
-                                   </button>`
+                                ? `<button type="button" class="btn btn-sm btn-light border text-muted py-1 px-2" disabled style="font-size: 0.75rem;">Đã hủy</button>`
                                 : isPaid
-                                ? `<button type="button" class="btn-fp-outline py-1 px-3" style="font-size: 0.78rem;" onclick="openOrderQrModal(${ord.id}, false)">
-                                       Xem biên lai
+                                ? `<button type="button" class="btn-pos-receipt" onclick="openOrderQrModal(${ord.id}, false)">
+                                       <svg class="hi-icon hi-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                           <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z"/>
+                                       </svg>
+                                       <span>Biên lai</span>
                                    </button>`
-                                : `<button type="button" class="btn-fp-dark py-1 px-3" style="font-size: 0.78rem;" onclick="openOrderQrModal(${ord.id}, true)">
+                                : `<button type="button" class="btn-pos-qr" onclick="openOrderQrModal(${ord.id}, true)">
                                        ${getHeroicon("qr-code", "hi-icon hi-icon-sm")}
-                                       <span>${qrStatus === "ACTIVE" ? "Hiện mã QR" : "Xuất mã QR"}</span>
+                                       <span>Xuất QR</span>
                                    </button>`
                         }
                     </td>
@@ -692,10 +720,10 @@ async function handleCreatePosOrder(event) {
 // 8. Sinh đường dẫn ảnh mã VietQR chuẩn EMVCo và hiển thị hộp thoại
 function buildEmvcoVietQrUrl(orderCode, expectedAmount) {
     const bankBin = "970422";
-    const accountNo = "0123456789";
+    const accountNo = "0888999777";
     const amount = Math.round(Number(expectedAmount || 0));
     const addInfo = encodeURIComponent(`TT ${orderCode}`);
-    const accountName = encodeURIComponent("VIETQR RECONHUB");
+    const accountName = encodeURIComponent("CTY TNHH RECONHUB RETAIL");
     return `https://img.vietqr.io/image/${bankBin}-${accountNo}-compact2.png?amount=${amount}&addInfo=${addInfo}&accountName=${accountName}`;
 }
 
@@ -890,7 +918,7 @@ function displayQrInModal(order, qrData) {
     }
 
     if (simLinkEl) {
-        const currentShift = document.getElementById("pos-filter-shift")?.value || order.shift_id || "";
+        const currentShift = document.getElementById("pos-shift-select")?.value || document.getElementById("pos-filter-shift")?.value || order.shift_id || "";
         const returnUrl =
             currentShift && currentShift !== "ALL"
                 ? `pos.html?shift_id=${encodeURIComponent(currentShift)}`

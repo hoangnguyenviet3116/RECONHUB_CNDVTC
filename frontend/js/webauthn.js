@@ -63,7 +63,7 @@ async function registerWebAuthnCredential() {
 
     let optionsData = null;
     try {
-        optionsData = await apiRequest("/webauthn/register/options", {
+        optionsData = await apiRequest("/decisions/webauthn/register/options", {
             method: "POST",
             body: JSON.stringify({
                 user_id: userId,
@@ -142,7 +142,7 @@ async function registerWebAuthnCredential() {
     }
 
     try {
-        const verifyRes = await apiRequest("/webauthn/register/verify", {
+        const verifyRes = await apiRequest("/decisions/webauthn/register/verify", {
             method: "POST",
             body: JSON.stringify({
                 user_id: userId,
@@ -188,7 +188,7 @@ async function requestWebAuthnAssertion(actionContext = {}) {
 
     let authOptions = null;
     try {
-        authOptions = await apiRequest("/webauthn/authenticate/options", {
+        authOptions = await apiRequest("/decisions/webauthn/authenticate/options", {
             method: "POST",
             body: JSON.stringify({
                 user_id: userId,
