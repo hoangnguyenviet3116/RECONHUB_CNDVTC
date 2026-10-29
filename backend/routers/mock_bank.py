@@ -70,7 +70,7 @@ def trigger_mock_bank_transfer(payload: dict, db: Session = Depends(get_db)):
     }
 
     try:
-        response = requests.post(WEBHOOK_URL, data=payload_bytes, headers=headers)
+        response = requests.post(WEBHOOK_URL, data=payload_bytes, headers=headers, timeout=5.0)
         resp_data = response.json() if response.content else {}
 
         # Nếu Webhook từ chối (401 sai HMAC hoặc 400 trùng mã GD), trả đúng HTTP status đó về cho Frontend hiển thị

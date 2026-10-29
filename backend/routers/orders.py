@@ -146,8 +146,6 @@ def get_orders(
     query = db.query(models.Order)
     if shift_id is not None:
         filtered = query.filter(models.Order.shift_id == shift_id).order_by(models.Order.id.desc()).all()
-        if not filtered and shift_id in [0, 1]:
-            filtered = query.order_by(models.Order.id.desc()).all()
     else:
         filtered = query.order_by(models.Order.id.desc()).all()
 

@@ -16,6 +16,7 @@ router = APIRouter(
 )
 
 
+@router.get("", response_model=List[schemas.PaymentRequestResponse])
 @router.get("/", response_model=List[schemas.PaymentRequestResponse])
 def get_payment_requests(
     order_id: Optional[int] = None,
@@ -45,6 +46,7 @@ def get_payment_requests(
     return results
 
 
+@router.post("", response_model=schemas.PaymentRequestResponse, status_code=status.HTTP_201_CREATED)
 @router.post("/", response_model=schemas.PaymentRequestResponse, status_code=status.HTTP_201_CREATED)
 def create_payment_request(
     req: schemas.PaymentRequestCreate,

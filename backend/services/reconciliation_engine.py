@@ -163,8 +163,6 @@ def allocate_to_order(
     else:
         order.payment_status = models.PaymentStatus.PARTIALLY_PAID
 
-    db.commit()
-
     # Ghi nhận sổ cái bất biến Hash-Chain Ledger (Blockchain & RegTech Pillar)
     add_ledger_entry(
         db=db,
@@ -176,6 +174,9 @@ def allocate_to_order(
         reversal_of_id=None,
         allocation_mode=mode
     )
+
+    # Commit toàn bộ cập nhật (Order + BankTx + PaymentRequest + Ledger) trong cùng 1 transaction nguyên tử
+    db.commit()
 
     return actual_alloc
 

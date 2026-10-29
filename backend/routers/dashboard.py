@@ -118,6 +118,7 @@ def verify_ledger_hash_chain(
 
 @router.get("/summary")
 def get_dashboard_summary(
+    date: Optional[str] = None,
     shift_id: Optional[str] = None,
     db: Session = Depends(get_db),
     user_info: dict = Depends(verify_merchant_user)
@@ -126,21 +127,90 @@ def get_dashboard_summary(
     auto_close_expired_shifts(db)
     all_shifts = db.query(models.Shift).order_by(models.Shift.id.asc()).all()
     if not all_shifts:
-        raise HTTPException(status_code=404, detail="Chưa có ca làm việc nào trong hệ thống.")
+        return {
+            "status": "success",
+            "shift_id": "ALL",
+            "shift_name": "Chưa có ca làm việc",
+            "target_revenue": Decimal("0.00"),
+            "valid_order_total": Decimal("0.00"),
+            "cancelled_order_total": Decimal("0.00"),
+            "total_order_amount": Decimal("0.00"),
+            "total_order_count": 0,
+            "valid_order_count": 0,
+            "cancelled_order_count": 0,
+            "active_qr_request_total": Decimal("0.00"),
+            "allocated_payment_total": Decimal("0.00"),
+            "unissued_qr_amount": Decimal("0.00"),
+            "pending_qr_collection": Decimal("0.00"),
+            "remaining_receivable": Decimal("0.00"),
+            "unallocated_bank_tx_total": Decimal("0.00"),
+            "total_bank_received": Decimal("0.00"),
+            "bank_transaction_count": 0,
+            "allocated_order_count": 0,
+            "unpaid_order_count": 0,
+            "unallocated_bank_tx_count": 0,
+            "ledger_integrity_valid": True,
+            "orders": [],
+            "available_shifts": [],
+            "ledger_entries": [],
+            "bank_transactions": [],
+            "payment_allocations": [],
+            "decisions": []
+        }
+
+    # Thu thập danh sách các ngày có ca làm việc
+    available_dates_set = {s.start_time.strftime("%Y-%m-%d") for s in all_shifts if s.start_time}
+    available_dates = sorted(list(available_dates_set), reverse=True)
+
+    from datetime import datetime as dt_cls
+    today_str = dt_cls.now().strftime("%Y-%m-%d")
+    selected_date_str = date.strip() if (date and date.strip()) else (available_dates[0] if available_dates else today_str)
+
+    # Lọc các ca thuộc ngày được chọn
+    day_shifts = [
+        s for s in all_shifts
+        if s.start_time and s.start_time.strftime("%Y-%m-%d") == selected_date_str
+    ]
+    day_shift_ids = [s.id for s in day_shifts]
+
+    # Tính toán mảng biến động doanh thu theo từng ca trong ngày (Shift Breakdown)
+    shift_breakdown = []
+    for s in day_shifts:
+        s_orders = db.query(models.Order).filter(models.Order.shift_id == s.id).all()
+        s_valid = [o for o in s_orders if o.order_status in [models.OrderStatus.CONFIRMED_ORDER, models.OrderStatus.UNDER_REVIEW]]
+        s_valid_total = sum((Decimal(str(o.total_amount)) for o in s_valid), Decimal("0.00"))
+        s_valid_ids = [o.id for o in s_valid]
+        s_allocs = db.query(models.PaymentAllocation).filter(models.PaymentAllocation.order_id.in_(s_valid_ids)).all() if s_valid_ids else []
+        s_allocated_total = sum((Decimal(str(a.allocated_amount)) for a in s_allocs), Decimal("0.00"))
+        shift_breakdown.append({
+            "shift_id": s.id,
+            "shift_name": s.name,
+            "status": s.status.value if hasattr(s.status, "value") else str(s.status),
+            "target_revenue": float(s.target_revenue),
+            "valid_order_total": float(s_valid_total),
+            "allocated_payment_total": float(s_allocated_total),
+            "remaining_receivable": float(max(Decimal("0.00"), s_valid_total - s_allocated_total)),
+            "order_count": len(s_valid),
+            "start_time": s.start_time.isoformat() if s.start_time else None,
+            "end_time": s.end_time.isoformat() if s.end_time else None
+        })
 
     # Xác định ca làm việc cần đối soát:
-    # 1. "ALL": Tổng hợp toàn bộ các ca
-    # 2. Mã số cụ thể (VD: "1", "3"): Lấy đúng ca tương ứng
-    # 3. None/Trống: Ưu tiên ca đang OPEN mới nhất, nếu không có lấy ca đầu tiên
+    # 1. "ALL": Tổng hợp toàn bộ các ca trong ngày đó (Chế độ 1)
+    # 2. Mã số cụ thể (VD: "1", "3"): Lấy đúng ca tương ứng (Chế độ 2)
+    # 3. None/Trống: Mặc định hiển thị tổng hợp ngày (Chế độ 1)
     selected_shift = None
     is_all_shifts = False
 
     if shift_id and str(shift_id).strip().upper() == "ALL":
         is_all_shifts = True
         shift_id_res = "ALL"
-        shift_name_res = "Tất cả ca bán hàng"
-        target_rev = sum((Decimal(str(s.target_revenue)) for s in all_shifts), Decimal("0.00"))
-        orders_query = db.query(models.Order)
+        shift_name_res = f"Tất cả ca trong ngày ({selected_date_str})"
+        target_rev = sum((Decimal(str(s.target_revenue)) for s in day_shifts), Decimal("0.00"))
+        if day_shift_ids:
+            orders_query = db.query(models.Order).filter(models.Order.shift_id.in_(day_shift_ids))
+        else:
+            orders_query = db.query(models.Order).filter(models.Order.id == -1)
     elif shift_id and str(shift_id).strip().isdigit():
         s_id = int(shift_id)
         selected_shift = db.query(models.Shift).filter(models.Shift.id == s_id).first()
@@ -155,17 +225,15 @@ def get_dashboard_summary(
             target_rev = Decimal(str(selected_shift.target_revenue))
             orders_query = db.query(models.Order).filter(models.Order.shift_id == selected_shift.id)
     else:
-        # Mặc định lấy ca đang OPEN mới nhất hoặc ca 1
-        open_shift = db.query(models.Shift).filter(
-            models.Shift.status == models.ShiftStatus.OPEN
-        ).order_by(models.Shift.id.desc()).first()
-        if not open_shift:
-            open_shift = all_shifts[0]
-        selected_shift = open_shift
-        shift_id_res = selected_shift.id
-        shift_name_res = selected_shift.name
-        target_rev = Decimal(str(selected_shift.target_revenue))
-        orders_query = db.query(models.Order).filter(models.Order.shift_id == selected_shift.id)
+        # Khi chỉ lọc ngày mà không chọn ca: Mặc định là tổng hợp toàn bộ ngày
+        is_all_shifts = True
+        shift_id_res = "ALL"
+        shift_name_res = f"Tất cả ca trong ngày ({selected_date_str})"
+        target_rev = sum((Decimal(str(s.target_revenue)) for s in day_shifts), Decimal("0.00"))
+        if day_shift_ids:
+            orders_query = db.query(models.Order).filter(models.Order.shift_id.in_(day_shift_ids))
+        else:
+            orders_query = db.query(models.Order).filter(models.Order.id == -1)
 
     all_orders_in_scope = orders_query.order_by(models.Order.id.desc()).all()
 
@@ -293,7 +361,31 @@ def get_dashboard_summary(
         for s in all_shifts
     ]
 
+    all_order_ids_in_scope = {o.id for o in all_orders_in_scope}
+    scoped_ledger_entries = (
+        chain_check["chain_details"]
+        if is_all_shifts
+        else [entry for entry in chain_check["chain_details"] if entry["order_id"] in all_order_ids_in_scope]
+    )
+
     return {
+        "selected_date": selected_date_str,
+        "available_dates": available_dates,
+        "is_day_summary": is_all_shifts,
+        "shift_breakdown": shift_breakdown,
+        "day_shifts": [
+            {
+                "id": s.id,
+                "name": s.name,
+                "status": s.status.value if hasattr(s.status, "value") else str(s.status),
+                "target_revenue": float(s.target_revenue),
+                "start_time": s.start_time.isoformat() if s.start_time else None,
+                "end_time": s.end_time.isoformat() if s.end_time else None,
+                "closed_at": s.closed_at.isoformat() if s.closed_at else None,
+                "date": s.start_time.strftime("%Y-%m-%d") if s.start_time else None
+            }
+            for s in day_shifts
+        ],
         "shift_id": shift_id_res,
         "shift_name": shift_name_res,
         "target_revenue": float(target_rev),
@@ -311,8 +403,8 @@ def get_dashboard_summary(
         "unallocated_bank_tx_total": float(unallocated_bank_tx_total),
         "total_bank_received": float(allocated_payment_total + unallocated_bank_tx_total),
         "ledger_integrity_valid": chain_check["is_valid"],
-        "total_ledger_records": chain_check["total_records"],
-        "ledger_entries": chain_check["chain_details"],
+        "total_ledger_records": len(scoped_ledger_entries),
+        "ledger_entries": scoped_ledger_entries,
         "payment_allocations": chain_check["chain_details"],
         "chain_details": chain_check["chain_details"],
         "orders": formatted_orders,
@@ -322,3 +414,4 @@ def get_dashboard_summary(
         "decisions": decisions_list,
         "recent_decisions": decisions_list
     }
+    

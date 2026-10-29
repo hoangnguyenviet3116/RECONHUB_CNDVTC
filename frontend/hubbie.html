@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trợ Lý Vận Hành Hubbie AI — VietQR ReconHub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/styles.css" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Thanh điều hướng ứng dụng (Left Sidebar) -->
+    <div id="app-navbar"></div>
+
+    <main class="py-4">
+        <div class="container shift-page-wrapper">
+
+            <!-- 2. KHUNG CHATBOT CHÍNH (HAI CỘT: LỊCH SỬ HỘI THOẠI & PHÒNG CHAT) -->
+            <div class="hubbie-main-card" data-gsap="card">
+
+                <!-- ===============================================================
+                     CỘT TRÁI (SIDEBAR HỘI THOẠI): TẠO MỚI, TÌM KIẾM, DANH SÁCH & QUOTA
+                     =============================================================== -->
+                <aside class="hubbie-sidebar" aria-label="Lịch sử cuộc trò chuyện">
+                    <!-- Nút bắt đầu cuộc trò chuyện mới -->
+                    <button type="button" class="btn-new-chat" id="btn-hubbie-new-chat">
+                        <svg class="hi-icon hi-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                        </svg>
+                        <span>Cuộc trò chuyện mới</span>
+                    </button>
+
+                    <!-- Ô tìm kiếm lịch sử trò chuyện -->
+                    <div class="hubbie-search-box">
+                        <svg class="hi-icon hi-icon-sm hubbie-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
+                        </svg>
+                        <input type="search" id="hubbie-conv-search" class="hubbie-search-input" placeholder="Tìm cuộc trò chuyện...">
+                    </div>
+
+                    <!-- Tiêu đề danh mục Gần đây -->
+                    <div class="d-flex justify-content-between align-items-center mt-3 mb-2 px-1">
+                        <span class="text-uppercase fw-bold text-secondary" style="font-size: 0.72rem; letter-spacing: 0.06em;">GẦN ĐÂY</span>
+                        <span class="text-secondary small" style="font-size: 0.72rem;" id="hubbie-conv-count">4 cuộc trò chuyện</span>
+                    </div>
+
+                    <!-- Danh sách các cuộc trò chuyện gần đây -->
+                    <div class="hubbie-conv-list" id="hubbie-conv-list">
+                        <!-- Cuộc trò chuyện 1 (Đang mở) -->
+                        <div class="hubbie-conv-item active" data-id="conv-1">
+                            <div class="hubbie-conv-icon">
+                                <svg class="hi-icon hi-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v5.518Z"/>
+                                </svg>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="d-flex align-items-center justify-content-between gap-1">
+                                    <span class="hubbie-conv-title">Tóm tắt doanh thu ca s...</span>
+                                    <span class="hubbie-conv-time">10:42</span>
+                                </div>
+                                <div class="hubbie-conv-snippet">Ca sáng đang đạt 70% mục tiê...</div>
+                            </div>
+                        </div>
+
+                        <!-- Cuộc trò chuyện 2 -->
+                        <div class="hubbie-conv-item" data-id="conv-2">
+                            <div class="hubbie-conv-icon" style="background: #334155;">
+                                <svg class="hi-icon hi-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v5.518Z"/>
+                                </svg>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="d-flex align-items-center justify-content-between gap-1">
+                                    <span class="hubbie-conv-title">Kiểm tra đơn chưa thanh...</span>
+                                    <span class="hubbie-conv-time">Hôm qua</span>
+                                </div>
+                                <div class="hubbie-conv-snippet">Có 2 đơn hàng quá 15 phút...</div>
+                            </div>
+                        </div>
+
+                        <!-- Cuộc trò chuyện 3 -->
+                        <div class="hubbie-conv-item" data-id="conv-3">
+                            <div class="hubbie-conv-icon" style="background: #334155;">
+                                <svg class="hi-icon hi-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v5.518Z"/>
+                                </svg>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="d-flex align-items-center justify-content-between gap-1">
+                                    <span class="hubbie-conv-title">Đối soát chênh lệch sổ quỹ</span>
+                                    <span class="hubbie-conv-time">27/10</span>
+                                </div>
+                                <div class="hubbie-conv-snippet">Đã khớp 100% giao dịch QR...</div>
+                            </div>
+                        </div>
+
+                        <!-- Cuộc trò chuyện 4 -->
+                        <div class="hubbie-conv-item" data-id="conv-4">
+                            <div class="hubbie-conv-icon" style="background: #334155;">
+                                <svg class="hi-icon hi-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v5.518Z"/>
+                                </svg>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="d-flex align-items-center justify-content-between gap-1">
+                                    <span class="hubbie-conv-title">Phân tích tiền mặt vs QR</span>
+                                    <span class="hubbie-conv-time">26/10</span>
+                                </div>
+                                <div class="hubbie-conv-snippet">Tỷ lệ chuyển khoản đạt 82%...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chú thích bảo mật dữ liệu -->
+                    <div class="hubbie-quota-panel mt-auto pt-3 border-top">
+                        <div class="d-flex align-items-center gap-2 text-secondary" style="font-size: 0.74rem;">
+                            <svg class="hi-icon hi-icon-sm text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; flex-shrink: 0;">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"/>
+                            </svg>
+                            <span>Dữ liệu chỉ được dùng trong phạm vi cửa hàng.</span>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- ===============================================================
+                     CỘT PHẢI: KHU VỰC CHATBOT CHÍNH (HEADER, TIN NHẮN, GỢI Ý & INPUT)
+                     =============================================================== -->
+                <section class="hubbie-chat-area" aria-label="Phòng hội thoại trực tuyến">
+                    <!-- Header hội thoại -->
+                    <div class="hubbie-chat-header">
+                        <div class="hubbie-chat-header-brand d-flex align-items-center gap-3">
+                            <div class="hubbie-avatar-badge me-1">
+                                <svg class="hi-icon hi-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"/>
+                                </svg>
+                                <span class="online-dot"></span>
+                            </div>
+                            <div>
+                                <h2 class="h6 fw-bold mb-0 text-dark">Trợ lý vận hành ThuChi</h2>
+                                <span class="text-secondary small" style="font-size: 0.75rem;" id="hubbie-header-updated">
+                                    Phân tích dữ liệu ca sáng — Cập nhật lúc 10:42
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="shift-status-pill is-open" id="hubbie-shift-pill" style="font-size: 0.78rem;">
+                                Ca sáng — Thứ tư
+                            </span>
+                            <div class="dropdown">
+                                <button type="button" class="btn btn-sm btn-light border rounded-3 text-secondary py-1 px-2" data-bs-toggle="dropdown" aria-expanded="false" title="Tùy chọn">
+                                    •••
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-sm border small" style="border-radius: 12px;">
+                                    <li><button class="dropdown-item py-1.5" type="button" id="btn-clear-chat">🧹 Xóa lịch sử hội thoại</button></li>
+                                    <li><button class="dropdown-item py-1.5" type="button" id="btn-export-chat">📥 Xuất tóm tắt (TXT)</button></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Khung cuộn nội dung tin nhắn -->
+                    <div class="hubbie-messages-wrapper" id="hubbie-messages-container">
+                        <!-- Mốc phân cách thời gian -->
+                        <div class="hubbie-date-divider">
+                            <span class="hubbie-date-pill" id="hubbie-current-date-pill">Hôm nay, 29 tháng 10</span>
+                        </div>
+
+                        <!-- Tin nhắn chào của Bot Hubbie AI -->
+                        <div class="hubbie-msg-bot">
+                            <div class="hubbie-conv-icon" style="width: 32px; height: 32px; border-radius: 8px; background: #eff6ff; color: #1e3a8a;">
+                                <svg class="hi-icon hi-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <strong class="text-dark small fw-bold">ThuChi AI</strong>
+                                    <span class="text-secondary small font-numeric" style="font-size: 0.72rem;">10:40</span>
+                                </div>
+                                <div class="hubbie-bot-bubble">
+                                    Chào Minh Anh! Tôi là trợ lý vận hành <strong>ThuChi AI</strong>. Tôi có thể giúp bạn kiểm tra doanh thu, tìm kiếm các hóa đơn chưa thu đủ, đối soát tiền ngân hàng hoặc rà soát chênh lệch sổ quỹ ca hôm nay.
+                                    
+                                    <div class="hubbie-stat-box" id="hubbie-greeting-stats">
+                                        <div class="d-flex justify-content-between align-items-center border-bottom pb-1.5 mb-1.5">
+                                            <span class="fw-semibold text-secondary">Tình trạng ca hiện tại:</span>
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill font-numeric">Đang mở bán</span>
+                                        </div>
+                                        <div class="row g-2 text-center pt-1">
+                                            <div class="col-4">
+                                                <span class="d-block text-secondary" style="font-size: 0.72rem;">Doanh thu ca</span>
+                                                <strong class="font-numeric text-dark" id="hubbie-stat-revenue">-- ₫</strong>
+                                            </div>
+                                            <div class="col-4">
+                                                <span class="d-block text-secondary" style="font-size: 0.72rem;">Đơn hoàn tất</span>
+                                                <strong class="font-numeric text-success" id="hubbie-stat-orders">-- đơn</strong>
+                                            </div>
+                                            <div class="col-4">
+                                                <span class="d-block text-secondary" style="font-size: 0.72rem;">Lệch đối soát</span>
+                                                <strong class="font-numeric text-dark" id="hubbie-stat-discrepancy">0 ₫</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Hàng phím tắt gợi ý câu hỏi nhanh (Prompt Suggestion Chips) -->
+                    <div class="hubbie-chips-container" id="hubbie-chips">
+                        <button type="button" class="hubbie-chip" data-prompt="Hóa đơn nào chưa thu đủ?">
+                            Hóa đơn nào chưa thu đủ?
+                        </button>
+                        <button type="button" class="hubbie-chip" data-prompt="Kiểm tra tiền chênh lệch">
+                            Kiểm tra tiền chênh lệch
+                        </button>
+                        <button type="button" class="hubbie-chip" data-prompt="Tóm tắt doanh thu hôm nay">
+                            Tóm tắt doanh thu hôm nay
+                        </button>
+                    </div>
+
+                    <!-- Khung nhập tin nhắn Chatbot -->
+                    <div class="hubbie-input-bar">
+                        <form id="hubbie-chat-form" novalidate>
+                            <div class="hubbie-input-box">
+                                <button type="button" class="btn-hubbie-plus" id="btn-hubbie-templates" title="Thêm câu hỏi mẫu">
+                                    +
+                                </button>
+                                <input type="text" id="hubbie-input-text" class="hubbie-input-field" placeholder="Hỏi ThuChi AI về tình hình cửa hàng..." autocomplete="off">
+                                <span class="hubbie-enter-hint d-none d-sm-inline">Enter để gửi</span>
+                                <button type="submit" class="btn-hubbie-send" id="btn-hubbie-send" title="Gửi tin nhắn">
+                                    <svg class="hi-icon hi-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </form>
+                        <div class="hubbie-disclaimer">
+                            ThuChi AI có thể đưa ra thông tin chưa chính xác. Hãy kiểm tra dữ liệu trước khi thực hiện nghiệp vụ.
+                        </div>
+                    </div>
+
+                </section>
+
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer hệ thống -->
+    <div id="app-footer"></div>
+
+    <!-- Scripts dùng chung -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/hubbie.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            renderNavbar("hubbie");
+            renderFooter();
+            initPageAnimations();
+            initHubbiePage();
+        });
+    </script>
+</body>
+</html>

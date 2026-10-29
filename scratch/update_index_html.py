@@ -1,18 +1,137 @@
 # -*- coding: utf-8 -*-
-with open('frontend/index.html', 'r', encoding='utf-8') as f:
-    c = f.read()
 
-target = """    <!-- HỘP THOẠI: XEM TÓM TẮT CA -->"""
+new_html = """<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý ca bán hàng — VietQR ReconHub</title>
 
-replacement = """    <!-- HỘP THOẠI XÁC NHẬN ĐÓNG CA THỦ CÔNG -->
+    <!-- Google Fonts: Be Vietnam Pro & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/styles.css" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Thanh điều hướng chuẩn hiện đại -->
+    <div id="app-navbar"></div>
+
+    <main class="py-4">
+        <div class="container shift-page-wrapper">
+
+            <!-- ===================================================================
+                 1. TIÊU ĐỀ TRANG: VẬN HÀNH HÔM NAY / QUẢN LÝ CA BÁN HÀNG
+                 =================================================================== -->
+            <header class="mb-4" data-gsap="card">
+                <div class="shift-eyebrow">VẬN HÀNH HÔM NAY</div>
+                <h1 class="shift-main-title">Quản lý ca bán hàng</h1>
+                <p class="shift-sub-title">Tạo ca mới, theo dõi tiến độ doanh thu và kết thúc ngày làm việc.</p>
+            </header>
+
+            <!-- ===================================================================
+                 2. KHỐI NỔI BẬT: MỞ CA LÀM VIỆC MỚI (INLINE QUICK FORM)
+                 =================================================================== -->
+            <section class="shift-create-card mb-4" data-gsap="card">
+                <div class="shift-create-card-header">
+                    <div class="shift-create-icon-badge">
+                        <svg class="hi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 4.5v15m7.5-7.5h-15"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="h6 fw-bold mb-0 text-dark" style="font-size: 1.05rem;">Mở ca làm việc mới</h2>
+                        <p class="text-secondary small mb-0">Thiết lập thông tin trước khi quầy bắt đầu nhận đơn.</p>
+                    </div>
+                </div>
+
+                <form id="open-shift-form" novalidate>
+                    <div class="row g-3 align-items-end">
+                        <div class="col-12 col-md-4 col-lg-3">
+                            <label for="shift-name" class="shift-input-label">Tên ca</label>
+                            <input type="text" class="form-control shift-input" id="shift-name" required placeholder="VD: Ca chiều — Thứ tư" value="Ca chiều — Thứ tư">
+                        </div>
+
+                        <div class="col-12 col-md-4 col-lg-3">
+                            <label for="target-revenue" class="shift-input-label">Mục tiêu doanh thu</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control shift-input font-numeric" id="target-revenue" required min="1000" step="1000" placeholder="15.000.000" value="15000000">
+                                <span class="input-group-text shift-input-addon">đ</span>
+                            </div>
+                        </div>
+
+                        <div class="col-6 col-md-2 col-lg-2">
+                            <label for="shift-start-time" class="shift-input-label">Giờ bắt đầu</label>
+                            <input type="datetime-local" class="form-control shift-input" id="shift-start-time" required>
+                        </div>
+
+                        <div class="col-6 col-md-2 col-lg-2">
+                            <label for="shift-end-time" class="shift-input-label">Giờ kết thúc</label>
+                            <input type="datetime-local" class="form-control shift-input" id="shift-end-time" required>
+                        </div>
+
+                        <div class="col-12 col-lg-2 text-lg-end">
+                            <button type="submit" class="btn-shift-create w-100" id="btn-submit-shift">
+                                <svg class="hi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width: 1rem; height: 1rem;">
+                                    <path d="M12 4.5v15m7.5-7.5h-15"/>
+                                </svg>
+                                <span>Tạo ca mới</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="open-shift-error" class="alert alert-danger py-2 px-3 small d-none mt-3" role="alert"></div>
+                </form>
+            </section>
+
+            <!-- Khối thông báo nếu cần -->
+            <div id="active-shift-banner"></div>
+
+            <!-- ===================================================================
+                 3. DANH SÁCH CÁC CA LÀM VIỆC & BỘ LỌC TRẠNG THÁI
+                 =================================================================== -->
+            <section class="mt-4" data-gsap="card">
+                <div class="shift-list-header">
+                    <div>
+                        <h2 class="shift-list-title">Danh sách ca làm việc</h2>
+                        <div class="shift-list-subtitle" id="shifts-count-label">3 ca gần nhất</div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <select id="filter-shift-status" class="form-select shift-filter-select" aria-label="Lọc theo trạng thái ca">
+                            <option value="ALL">Tất cả trạng thái</option>
+                            <option value="OPEN">Đang mở</option>
+                            <option value="CLOSED">Đã đóng</option>
+                        </select>
+                        <button type="button" class="btn-shift-refresh" id="btn-refresh-shifts" title="Làm mới danh sách">
+                            ↻ Làm mới
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Danh sách thẻ ca làm việc nằm ngang -->
+                <div id="shifts-container" class="d-flex flex-column gap-3">
+                    <div class="text-center py-5 text-secondary bg-white rounded-4 border">
+                        Đang tải danh sách ca bán hàng...
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- HỘP THOẠI XÁC NHẬN ĐÓNG CA THỦ CÔNG (MERKLE TREE AUDIT SEALING) -->
     <div class="modal fade" id="confirmCloseShiftModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 460px;">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 18px;">
                 <div class="modal-header border-bottom pb-2 pt-3 px-4">
                     <div class="d-flex align-items-center gap-2">
-                        <span class="fp-brand-mark" style="width:32px;height:32px;background:#fff1f2;color:#e11d48;border:1px solid #fecdd3;">
+                        <span class="shift-icon-box" style="width:34px;height:34px;background:#fff1f2;color:#e11d48;border:1px solid #fecdd3;">
                             <svg class="hi-icon hi-icon-sm" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
                             </svg>
                         </span>
                         <h3 class="h6 fw-bold mb-0 text-danger">Xác Nhận Đóng Ca Làm Việc</h3>
@@ -21,19 +140,19 @@ replacement = """    <!-- HỘP THOẠI XÁC NHẬN ĐÓNG CA THỦ CÔNG -->
                 </div>
                 <div class="modal-body px-4 pb-4 pt-3">
                     <p class="small text-secondary mb-2">
-                        Bạn đang chuẩn bị đóng ca bán hàng:
+                        Bạn đang chuẩn bị đóng ca và niêm phong chứng từ kiểm toán:
                     </p>
                     <div class="p-2 px-3 rounded-3 bg-light border mb-3">
                         <strong class="d-block text-dark" id="modal-close-shift-name">Ca làm việc</strong>
                         <span class="text-secondary small">Mã ca: #<span id="modal-close-shift-id">-</span></span>
                     </div>
-                    <div class="alert alert-warning py-2 px-3 small mb-3 border-0">
-                        <strong>Lưu ý:</strong> Sau khi đóng ca, Quầy thu ngân sẽ <strong>ngay lập tức bị vô hiệu hóa</strong> việc tạo hóa đơn mới cho ca này. Các hóa đơn và giao dịch đã tạo trước đó vẫn được bảo toàn cho công tác đối soát.
+                    <div class="alert alert-warning py-2 px-3 small mb-3 border-0 rounded-3" style="background:#fffbeb; color:#92400e;">
+                        <strong>Bảo mật &amp; Kiểm toán:</strong> Khi đóng ca, hệ thống sẽ tự động gom toàn bộ các mã băm giao dịch trong ca để <strong>dựng Cây Merkle và sinh mã băm Merkle Root niêm phong</strong> lưu vào sổ cái. Quầy thu ngân sẽ bị khóa tạo hóa đơn mới cho ca này.
                     </div>
                     <div id="close-shift-error" class="alert alert-danger py-2 px-3 small d-none" role="alert"></div>
                     <div class="d-flex justify-content-end gap-2 mt-3">
-                        <button type="button" class="btn-fp-outline" data-bs-dismiss="modal">Hủy bỏ</button>
-                        <button type="button" class="btn-fp-danger py-2 px-3" id="btn-confirm-close-shift">
+                        <button type="button" class="btn-shift-action-pos py-2 px-3" data-bs-dismiss="modal">Hủy bỏ</button>
+                        <button type="button" class="btn-shift-action-close py-2 px-3" id="btn-confirm-close-shift">
                             Xác nhận đóng ca
                         </button>
                     </div>
@@ -42,12 +161,53 @@ replacement = """    <!-- HỘP THOẠI XÁC NHẬN ĐÓNG CA THỦ CÔNG -->
         </div>
     </div>
 
-    <!-- HỘP THOẠI: XEM TÓM TẮT CA -->"""
+    <!-- HỘP THOẠI: XEM TÓM TẮT & KIỂM TOÁN CA -->
+    <div class="modal fade" id="shiftDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 18px;">
+                <div class="modal-header border-bottom pb-3 pt-4 px-4">
+                    <h3 class="h5 fw-bold mb-0">Thông Tin Chi Tiết Ca Bán Hàng</h3>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body px-4 pb-4 pt-3" id="shift-detail-body"></div>
+            </div>
+        </div>
+    </div>
 
-assert target in c, "target not found in index.html"
-c = c.replace(target, replacement, 1)
+    <!-- HỘP THOẠI DỰ PHÒNG: MỞ CA BÁN HÀNG MỚI (BACKWARD COMPATIBILITY) -->
+    <div class="modal fade" id="openShiftModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 18px;">
+                <div class="modal-header border-bottom pb-3 pt-4 px-4">
+                    <h3 class="h5 fw-bold mb-0">Mở Ca Bán Hàng Mới</h3>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body px-4 pb-4 pt-3">
+                    <p class="small text-secondary mb-3">Vui lòng sử dụng form tạo nhanh trên đầu trang để thiết lập ca làm việc.</p>
+                </div>
+            </div>
+        </div>
+    </div>
 
-with open('frontend/index.html', 'w', encoding='utf-8') as f:
-    f.write(c)
+    <div id="app-footer"></div>
 
-print("Updated frontend/index.html successfully")
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/shifts.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            renderNavbar("shifts");
+            renderFooter();
+            initPageAnimations();
+            initShiftsPage();
+        });
+    </script>
+</body>
+</html>
+"""
+
+with open("frontend/index.html", "w", encoding="utf-8") as f:
+    f.write(new_html)
+
+print("Updated frontend/index.html successfully.")
