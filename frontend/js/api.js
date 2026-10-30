@@ -127,13 +127,43 @@ function getCurrentMerchantId() {
 
 function getCurrentUserId() {
     const role = getCurrentRole();
-    if (role === "CASHIER") return 2;
-    if (role === "REVIEWER") return 3;
-    return 1;
+    if (role === "CASHIER") return 1;
+    if (role === "REVIEWER") return 2;
+    return 3;
+}
+
+function getLoggedInUser() {
+    try {
+        const raw = localStorage.getItem("recon_user");
+        if (raw) return JSON.parse(raw);
+    } catch (_) {}
+    const role = getCurrentRole();
+    const defaults = {
+        OWNER: { id: 3, full_name: "Lê Hồng Hạnh", email: "owner@reconhub.vn", role: "OWNER", merchant_id: 1, merchant_name: "VietQR ReconHub Flagship Store" },
+        REVIEWER: { id: 2, full_name: "Trần Thu Thảo", email: "reviewer@reconhub.vn", role: "REVIEWER", merchant_id: 1, merchant_name: "VietQR ReconHub Flagship Store" },
+        CASHIER: { id: 1, full_name: "Nguyễn Việt Hoàng", email: "cashier@reconhub.vn", role: "CASHIER", merchant_id: 1, merchant_name: "VietQR ReconHub Flagship Store" }
+    };
+    return defaults[role] || defaults["OWNER"];
+}
+
+function handleNavbarLogout() {
+    localStorage.removeItem("reconhub_token");
+    localStorage.removeItem("recon_user");
+    localStorage.setItem("reconhub_logged_out", "true");
+    window.location.href = "login.html";
 }
 
 function setCurrentRole(role) {
     localStorage.setItem("recon_role", role);
+    localStorage.removeItem("reconhub_logged_out");
+    const defaults = {
+        OWNER: { id: 3, full_name: "Lê Hồng Hạnh", email: "owner@reconhub.vn", role: "OWNER", merchant_id: 1, merchant_name: "VietQR ReconHub Flagship Store" },
+        REVIEWER: { id: 2, full_name: "Trần Thu Thảo", email: "reviewer@reconhub.vn", role: "REVIEWER", merchant_id: 1, merchant_name: "VietQR ReconHub Flagship Store" },
+        CASHIER: { id: 1, full_name: "Nguyễn Việt Hoàng", email: "cashier@reconhub.vn", role: "CASHIER", merchant_id: 1, merchant_name: "VietQR ReconHub Flagship Store" }
+    };
+    if (defaults[role]) {
+        localStorage.setItem("recon_user", JSON.stringify(defaults[role]));
+    }
     const roleNames = {
         CASHIER: "Thu ngân",
         REVIEWER: "Kế toán",
@@ -145,11 +175,13 @@ function setCurrentRole(role) {
 
 async function apiRequest(endpoint, options = {}) {
     const url = endpoint.startsWith("http") ? endpoint : `${API_BASE_URL}${endpoint}`;
+    const token = localStorage.getItem("reconhub_token");
     const defaultHeaders = {
         "Content-Type": "application/json",
         "X-Demo-Role": getCurrentRole(),
         "X-Merchant-Id": String(getCurrentMerchantId()),
-        "X-User-Id": String(getCurrentUserId())
+        "X-User-Id": String(getCurrentUserId()),
+        ...(token ? { "Authorization": `Bearer ${token}` } : {})
     };
 
     const config = {
@@ -341,6 +373,18 @@ function renderNavbar(activePage = "shifts") {
     const mount = document.getElementById("app-navbar");
     if (!mount) return;
     const role = getCurrentRole();
+    const currentUser = getLoggedInUser();
+    const initials = (currentUser.full_name || "RH")
+        .split(" ")
+        .filter(Boolean)
+        .slice(-2)
+        .map(w => w[0].toUpperCase())
+        .join("") || "RH";
+    const roleTitles = {
+        OWNER: "Chủ cửa hàng",
+        REVIEWER: "Kế toán đối soát",
+        CASHIER: "Thu ngân POS"
+    };
 
     mount.innerHTML = `
         <!-- Thanh điều hướng dạng Sidebar dọc bên trái (Desktop & Tablet) -->
@@ -390,19 +434,32 @@ function renderNavbar(activePage = "shifts") {
                 </nav>
             </div>
 
-            <!-- 3. Chân Sidebar: Bộ chọn Vai trò & Trạng thái sổ quỹ -->
+            <!-- 3. Chân Sidebar: Hồ sơ người dùng & Bộ chọn Vai trò -->
             <div class="sidebar-footer">
+                <div class="sidebar-user-card">
+                    <div class="sidebar-user-avatar">${initials}</div>
+                    <div class="sidebar-user-info">
+                        <div class="sidebar-user-name" title="${escapeHtml(currentUser.full_name)}">${escapeHtml(currentUser.full_name)}</div>
+                        <div class="sidebar-user-role">${roleTitles[role] || role}</div>
+                    </div>
+                    <button type="button" class="btn-sidebar-logout" onclick="handleNavbarLogout()" title="Đăng xuất khỏi hệ thống">
+                        <svg class="hi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
+                        </svg>
+                    </button>
+                </div>
+
                 <div class="sidebar-role-panel">
                     <div class="d-flex align-items-center justify-content-between mb-1.5">
-                        <span class="sidebar-role-label">VAI TRÒ SỬ DỤNG</span>
+                        <span class="sidebar-role-label">CHUYỂN NHANH VAI TRÒ</span>
                         <button type="button" class="btn-sidebar-reset" onclick="resetDemoStore()" title="Khôi phục dữ liệu mặc định">
                             ↻
                         </button>
                     </div>
                     <select id="global-role-select" class="form-select sidebar-role-select" aria-label="Tài khoản sử dụng">
-                        <option value="OWNER" ${role === "OWNER" ? "selected" : ""}>Chủ cửa hàng</option>
-                        <option value="REVIEWER" ${role === "REVIEWER" ? "selected" : ""}>Kế toán</option>
-                        <option value="CASHIER" ${role === "CASHIER" ? "selected" : ""}>Thu ngân</option>
+                        <option value="OWNER" ${role === "OWNER" ? "selected" : ""}>Chủ cửa hàng (Admin)</option>
+                        <option value="REVIEWER" ${role === "REVIEWER" ? "selected" : ""}>Kế toán (Đối soát)</option>
+                        <option value="CASHIER" ${role === "CASHIER" ? "selected" : ""}>Thu ngân (Bán hàng)</option>
                     </select>
                 </div>
 
@@ -481,3 +538,16 @@ function initPageAnimations() {
         }
     });
 }
+function checkAuthGuard() {
+    const path = window.location.pathname.toLowerCase();
+    const isPublicPage = path.endsWith('login.html') || 
+                         path.endsWith('register.html') || 
+                         path.endsWith('bank-simulator.html');
+    const hasToken = Boolean(localStorage.getItem('reconhub_token'));
+
+    // Nếu chưa đăng nhập và đang ở các trang chức năng nội bộ -> Chuyển hướng về login
+    if (!hasToken && !isPublicPage) {
+        window.location.href = 'login.html';
+    }
+}
+checkAuthGuard();

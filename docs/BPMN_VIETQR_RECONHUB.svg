@@ -1,0 +1,365 @@
+<svg id="bpmn-svg" viewBox="0 0 1850 1220" xmlns="http://www.w3.org/2000/svg" style="background:#ffffff; font-family:'Segoe UI', Tahoma, Arial, sans-serif;">
+    <defs>
+        <!-- Marker for Sequence Flow -->
+        <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#374151" />
+        </marker>
+        <!-- Marker for Message Flow -->
+        <marker id="msg-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#ffffff" stroke="#1d4ed8" stroke-width="1.5" />
+        </marker>
+        <!-- Drop Shadow -->
+        <filter id="box-shadow" x="-3%" y="-5%" width="108%" height="114%">
+            <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-opacity="0.06"/>
+        </filter>
+    </defs>
+
+    <style>
+        .pool-border { fill: #ffffff; stroke: #0f172a; stroke-width: 2.5; }
+        .pool-header { fill: #0f172a; }
+        
+        .lane-bg-1 { fill: #f8fafc; }
+        .lane-bg-2 { fill: #f0fdf4; }
+        .lane-bg-3 { fill: #f8fafc; }
+        .lane-bg-4 { fill: #fffbeb; }
+        .lane-bg-5 { fill: #fdf2f8; }
+        
+        .lane-line { stroke: #cbd5e1; stroke-width: 1.5; stroke-dasharray: 6 3; }
+        
+        .task-box { fill: #ffffff; stroke: #334155; stroke-width: 1.6; rx: 8; ry: 8; filter: url(#box-shadow); }
+        .task-title { font-size: 11px; font-weight: 600; fill: #1e293b; text-anchor: middle; }
+        .task-sub { font-size: 10px; fill: #64748b; text-anchor: middle; }
+        
+        .start-event { fill: #dcfce7; stroke: #15803d; stroke-width: 2.5; }
+        .end-success { fill: #dcfce7; stroke: #166534; stroke-width: 4; }
+        .end-error { fill: #fee2e2; stroke: #b91c1c; stroke-width: 4; }
+        .inter-msg { fill: #eff6ff; stroke: #1d4ed8; stroke-width: 2; }
+        .inter-msg-inner { fill: none; stroke: #1d4ed8; stroke-width: 1.5; }
+        
+        .gateway { fill: #fef9c3; stroke: #ca8a04; stroke-width: 2; }
+        .gateway-icon { font-size: 18px; font-weight: bold; fill: #a16207; text-anchor: middle; dominant-baseline: central; }
+        
+        .seq-flow { stroke: #475569; stroke-width: 1.8; fill: none; marker-end: url(#arrow); }
+        .msg-flow { stroke: #2563eb; stroke-width: 1.8; stroke-dasharray: 6 4; fill: none; marker-end: url(#msg-arrow); }
+        
+        .flow-text { font-size: 9.5px; font-weight: 600; fill: #1d4ed8; background: #ffffff; text-anchor: middle; }
+        .data-store-shape { fill: #e0f2fe; stroke: #0284c7; stroke-width: 1.6; }
+    </style>
+
+    <!-- ============================================================ -->
+    <!-- POOL CONTAINER & TOP TITLE BAR                               -->
+    <!-- ============================================================ -->
+    <rect x="20" y="20" width="1810" height="1180" rx="10" class="pool-border" />
+    
+    <!-- Top Pool Header (horizontal, zero rotation bugs) -->
+    <rect x="20" y="20" width="1810" height="42" rx="10" class="pool-header" />
+    <text x="925" y="46" fill="#ffffff" font-size="14" font-weight="bold" letter-spacing="1.2" text-anchor="middle">
+        BPMN 2.0: QUY TRÌNH NGHIỆP VỤ THANH TOÁN VIETQR &amp; ĐỐI SOÁT DÒNG TIỀN TỰ ĐỘNG (VIETQR RECONHUB)
+    </text>
+
+    <!-- ============================================================ -->
+    <!-- 5 SWIMLANES BACKGROUNDS & HORIZONTAL HEADER CARDS            -->
+    <!-- ============================================================ -->
+    
+    <!-- LANE 1: KHÁCH HÀNG (y: 62 to 275, h: 213) -->
+    <rect x="20" y="62" width="1810" height="213" class="lane-bg-1" />
+    <rect x="20" y="62" width="170" height="213" fill="#E8F5E9" stroke="#A5D6A7" stroke-width="1.2" />
+    <text x="105" y="150" font-size="12" font-weight="bold" fill="#1B5E20" text-anchor="middle">LÀN 1: KHÁCH HÀNG</text>
+    <text x="105" y="170" font-size="10.5" fill="#2E7D32" text-anchor="middle">(Customer / Payer)</text>
+    <line x1="20" y1="275" x2="1830" y2="275" class="lane-line" />
+
+    <!-- LANE 2: QUẦY THU NGÂN POS (y: 275 to 495, h: 220) -->
+    <rect x="20" y="275" width="1810" height="220" class="lane-bg-2" />
+    <rect x="20" y="275" width="170" height="220" fill="#E3F2FD" stroke="#90CAF9" stroke-width="1.2" />
+    <text x="105" y="370" font-size="12" font-weight="bold" fill="#0D47A1" text-anchor="middle">LÀN 2: THU NGÂN POS</text>
+    <text x="105" y="390" font-size="10.5" fill="#1565C0" text-anchor="middle">(Cashier / POS Terminal)</text>
+    <line x1="20" y1="495" x2="1830" y2="495" class="lane-line" />
+
+    <!-- LANE 3: NGÂN HÀNG & CỔNG THANH TOÁN (y: 495 to 705, h: 210) -->
+    <rect x="20" y="495" width="1810" height="210" class="lane-bg-3" />
+    <rect x="20" y="495" width="170" height="210" fill="#EDE7F6" stroke="#B39DDB" stroke-width="1.2" />
+    <text x="105" y="585" font-size="12" font-weight="bold" fill="#4A148C" text-anchor="middle">LÀN 3: NGÂN HÀNG</text>
+    <text x="105" y="605" font-size="10.5" fill="#6A1B9A" text-anchor="middle">(NAPAS &amp; Gateway)</text>
+    <line x1="20" y1="705" x2="1830" y2="705" class="lane-line" />
+
+    <!-- LANE 4: ĐỘNG CƠ ĐỐI SOÁT BACKEND (y: 705 to 975, h: 270) -->
+    <rect x="20" y="705" width="1810" height="270" class="lane-bg-4" />
+    <rect x="20" y="705" width="170" height="270" fill="#FFF3E0" stroke="#FFCC80" stroke-width="1.2" />
+    <text x="105" y="825" font-size="12" font-weight="bold" fill="#E65100" text-anchor="middle">LÀN 4: BACKEND RECONHUB</text>
+    <text x="105" y="845" font-size="10.5" fill="#EF6C00" text-anchor="middle">(Reconciliation Engine)</text>
+    <line x1="20" y1="975" x2="1830" y2="975" class="lane-line" />
+
+    <!-- LANE 5: KẾ TOÁN & QUẢN LÝ (y: 975 to 1200, h: 225) -->
+    <rect x="20" y="975" width="1810" height="225" class="lane-bg-5" />
+    <rect x="20" y="975" width="170" height="225" fill="#FCE4EC" stroke="#F48FB1" stroke-width="1.2" />
+    <text x="105" y="1075" font-size="12" font-weight="bold" fill="#880E4F" text-anchor="middle">LÀN 5: KẾ TOÁN &amp; QUẢN LÝ</text>
+    <text x="105" y="1095" font-size="10.5" fill="#AD1457" text-anchor="middle">(Reviewer &amp; Manager)</text>
+
+    <!-- ============================================================ -->
+    <!-- STAGE 1: TẠO ĐƠN & XUẤT QR (LANE 2)                           -->
+    <!-- ============================================================ -->
+    <!-- Start Event POS -->
+    <circle cx="230" cy="385" r="18" class="start-event" />
+    <text x="230" y="420" font-size="10" font-weight="bold" fill="#15803d" text-anchor="middle">Bắt đầu đơn</text>
+
+    <!-- Task: Nhập đơn hàng POS -->
+    <rect x="285" y="355" width="135" height="60" class="task-box" />
+    <text x="352" y="380" class="task-title">Tạo đơn hàng POS</text>
+    <text x="352" y="398" class="task-sub">(Nhập món, tổng tiền)</text>
+
+    <!-- Task: Yêu cầu sinh mã VietQR động -->
+    <rect x="455" y="355" width="145" height="60" class="task-box" />
+    <text x="527" y="380" class="task-title">Yêu cầu phát hành</text>
+    <text x="527" y="398" class="task-title" fill="#1d4ed8">VietQR động khóa tiền</text>
+
+    <!-- Task: Hiển thị mã QR lên màn hình phụ -->
+    <rect x="635" y="355" width="145" height="60" class="task-box" />
+    <text x="707" y="380" class="task-title">Hiển thị mã VietQR</text>
+    <text x="707" y="398" class="task-sub">(Khóa tiền &amp; mã đơn)</text>
+
+    <!-- ============================================================ -->
+    <!-- STAGE 2: KHÁCH HÀNG QUÉT MÃ & CHUYỂN KHOẢN (LANE 1)          -->
+    <!-- ============================================================ -->
+    <!-- Task: Xem mã QR trên màn hình phụ -->
+    <rect x="635" y="135" width="145" height="60" class="task-box" />
+    <text x="707" y="160" class="task-title">Xem mã QR khóa tiền</text>
+    <text x="707" y="178" class="task-sub">trên màn hình quầy</text>
+
+    <!-- Task: Quét mã bằng App Ngân hàng -->
+    <rect x="815" y="135" width="145" height="60" class="task-box" />
+    <text x="887" y="160" class="task-title">Quét mã bằng App</text>
+    <text x="887" y="178" class="task-title" fill="#15803d">Mobile Banking</text>
+
+    <!-- Task: Bấm xác nhận chuyển tiền 24/7 -->
+    <rect x="995" y="135" width="145" height="60" class="task-box" />
+    <text x="1067" y="160" class="task-title">Xác nhận chuyển khoản</text>
+    <text x="1067" y="178" class="task-sub">liên ngân hàng 24/7</text>
+
+    <!-- ============================================================ -->
+    <!-- STAGE 3: XỬ LÝ HẠCH TOÁN NGÂN HÀNG & KÝ HMAC (LANE 3)         -->
+    <!-- ============================================================ -->
+    <!-- Task: Hạch toán NAPAS 247 -->
+    <rect x="995" y="570" width="145" height="60" class="task-box" />
+    <text x="1067" y="595" class="task-title">Hạch toán NAPAS 24/7</text>
+    <text x="1067" y="613" class="task-sub">Ghi Có tài khoản chủ quán</text>
+
+    <!-- Task: Ký số HMAC-SHA256 -->
+    <rect x="1175" y="570" width="150" height="60" class="task-box" />
+    <text x="1250" y="595" class="task-title">Ký số HMAC-SHA256</text>
+    <text x="1250" y="613" class="task-title" fill="#d97706">(X-Webhook-Signature)</text>
+
+    <!-- Intermediate Message Event: Bắn Webhook -->
+    <circle cx="1375" cy="600" r="18" class="inter-msg" />
+    <circle cx="1375" cy="600" r="13" class="inter-msg-inner" />
+    <text x="1375" y="635" font-size="10" font-weight="bold" fill="#1d4ed8" text-anchor="middle">Bắn Webhook</text>
+
+    <!-- ============================================================ -->
+    <!-- STAGE 4: ĐỘNG CƠ ĐỐI SOÁT BACKEND (LANE 4)                    -->
+    <!-- ============================================================ -->
+    <!-- Task: Tiếp nhận bản tin & Verify HMAC -->
+    <rect x="1300" y="740" width="150" height="55" class="task-box" />
+    <text x="1375" y="763" class="task-title">Tiếp nhận Webhook &amp;</text>
+    <text x="1375" y="781" class="task-title" fill="#b91c1c">Verify HMAC-SHA256</text>
+
+    <!-- Gateway G1: Chữ ký hợp lệ? -->
+    <polygon points="1515,742 1545,767 1515,792 1485,767" class="gateway" />
+    <text x="1515" y="767" class="gateway-icon">×</text>
+    <text x="1515" y="730" font-size="9.5" font-weight="bold" fill="#b45309" text-anchor="middle">HMAC đúng?</text>
+
+    <!-- End Error 401 Unauthorized -->
+    <circle cx="1630" cy="767" r="16" class="end-error" />
+    <text x="1630" y="798" font-size="9.5" font-weight="bold" fill="#b91c1c" text-anchor="middle">401 Chặn giả mạo</text>
+
+    <!-- Task: Kiểm tra Idempotency & Đối soát 3 cấp -->
+    <rect x="1220" y="845" width="155" height="58" class="task-box" />
+    <text x="1297" y="868" class="task-title">Kiểm tra Idempotency &amp;</text>
+    <text x="1297" y="886" class="task-title" fill="#2563eb">Động cơ đối soát 3 cấp</text>
+
+    <!-- Gateway G2: Phân loại đối soát -->
+    <polygon points="1440,845 1470,874 1440,903 1410,874" class="gateway" />
+    <text x="1440" y="874" class="gateway-icon">+</text>
+    <text x="1440" y="835" font-size="9.5" font-weight="bold" fill="#b45309" text-anchor="middle">Kết quả đối soát</text>
+
+    <!-- Branch A: Cấp 1 (Exact Match) -->
+    <rect x="1520" y="815" width="135" height="42" class="task-box" style="stroke:#15803d; stroke-width:2;" />
+    <text x="1587" y="834" class="task-title" fill="#15803d">Cấp 1: Exact Match</text>
+    <text x="1587" y="848" class="task-sub">(Khớp 100% tiền &amp; mã)</text>
+
+    <!-- Branch B: Cấp 2 (Partial Match) -->
+    <rect x="1520" y="865" width="135" height="42" class="task-box" style="stroke:#d97706; stroke-width:2;" />
+    <text x="1587" y="884" class="task-title" fill="#d97706">Cấp 2: Partial Match</text>
+    <text x="1587" y="898" class="task-sub">(Chuyển thiếu tiền)</text>
+
+    <!-- Branch C: Cấp 3 (Fuzzy Match >= 85%) -->
+    <rect x="1520" y="915" width="135" height="42" class="task-box" style="stroke:#1d4ed8; stroke-width:2;" />
+    <text x="1587" y="934" class="task-title" fill="#1d4ed8">Cấp 3: TokenSetRatio</text>
+    <text x="1587" y="948" class="task-sub">(Khớp chuỗi mờ &gt;= 85%)</text>
+
+    <!-- Task: Cập nhật Sổ cái Hash Chain SHA-256 -->
+    <rect x="1695" y="815" width="130" height="55" class="task-box" />
+    <text x="1760" y="838" class="task-title">Cập nhật đơn PAID &amp;</text>
+    <text x="1760" y="856" class="task-title" fill="#0f172a">Sổ cái băm SHA-256</text>
+
+    <!-- Task: Bắn sự kiện Server-Sent Events (SSE) -->
+    <rect x="1695" y="725" width="130" height="55" class="task-box" style="stroke:#2563eb;" />
+    <text x="1760" y="748" class="task-title">Phát sự kiện SSE</text>
+    <text x="1760" y="766" class="task-title" fill="#2563eb">(/events/stream: PAID)</text>
+
+    <!-- Database Icon -->
+    <g transform="translate(1730, 895)">
+        <path d="M 0 4 C 0 -1, 35 -1, 35 4 L 35 22 C 35 27, 0 27, 0 22 Z" class="data-store-shape" />
+        <path d="M 0 4 C 0 9, 35 9, 35 4" fill="none" stroke="#0284c7" stroke-width="1.3" />
+        <text x="17" y="36" font-size="8" text-anchor="middle" font-weight="bold" fill="#0369a1">SQL Server</text>
+    </g>
+
+    <!-- ============================================================ -->
+    <!-- STAGE 5: QUẦY THU NGÂN NHẬN SSE & GIAO HÀNG (LANE 2 PHẢI)    -->
+    <!-- (X: 1100 to 1800 - ZERO OVERLAP WITH LEFT ORDER CREATION!)   -->
+    <!-- ============================================================ -->
+    <!-- Task: Nhận tín hiệu SSE xác nhận đã thu đủ -->
+    <rect x="1100" y="355" width="145" height="60" class="task-box" style="stroke:#15803d; stroke-width:2;" />
+    <text x="1172" y="378" class="task-title" fill="#15803d">Xác nhận ĐÃ THU ĐỦ</text>
+    <text x="1172" y="396" class="task-sub">(Màn hình chuyển xanh)</text>
+
+    <!-- Task: Tự động đóng mã QR & In hóa đơn -->
+    <rect x="1285" y="355" width="145" height="60" class="task-box" />
+    <text x="1357" y="380" class="task-title">Đóng Modal mã QR &amp;</text>
+    <text x="1357" y="398" class="task-sub">Tự động in hóa đơn POS</text>
+
+    <!-- Task: Bàn giao hàng hóa cho khách -->
+    <rect x="1470" y="355" width="140" height="60" class="task-box" />
+    <text x="1540" y="380" class="task-title">Bàn giao hàng hóa</text>
+    <text x="1540" y="398" class="task-sub">&amp; cảm ơn khách hàng</text>
+
+    <!-- End Event POS Success -->
+    <circle cx="1665" cy="385" r="18" class="end-success" />
+    <text x="1665" y="420" font-size="10" font-weight="bold" fill="#166534" text-anchor="middle">Giao dịch xong</text>
+
+    <!-- Task: Quầy POS nhận cảnh báo thiếu tiền (Cấp 2) -->
+    <rect x="900" y="425" width="150" height="50" class="task-box" style="stroke:#d97706; stroke-dasharray:4 2;" />
+    <text x="975" y="447" class="task-title" fill="#d97706">Cảnh báo thiếu tiền</text>
+    <text x="975" y="462" class="task-sub">(Thu ngân yêu cầu chuyển bù)</text>
+
+    <!-- ============================================================ -->
+    <!-- STAGE 6: KẾ TOÁN XỬ LÝ NGOẠI LỆ & CHỐT CA (LANE 5)           -->
+    <!-- ============================================================ -->
+    <!-- Task: Đưa vào hàng đợi tiền treo -->
+    <rect x="750" y="1035" width="145" height="55" class="task-box" style="stroke:#be185d;" />
+    <text x="822" y="1058" class="task-title" fill="#be185d">Tiền treo / Sai mã đơn</text>
+    <text x="822" y="1076" class="task-sub">(Hàng đợi ngoại lệ)</text>
+
+    <!-- Task: Kế toán đối chiếu & Ghép đơn -->
+    <rect x="935" y="1035" width="145" height="55" class="task-box" />
+    <text x="1007" y="1058" class="task-title">Kế toán chọn đơn ghép</text>
+    <text x="1007" y="1076" class="task-sub">&amp; nhập lý do giải trình</text>
+
+    <!-- Task: Ký số sinh trắc học WebAuthn FIDO2 -->
+    <rect x="1120" y="1035" width="155" height="55" class="task-box" style="stroke:#7e22ce; stroke-width:2;" />
+    <text x="1197" y="1058" class="task-title" fill="#7e22ce">Ký số WebAuthn/FIDO2</text>
+    <text x="1197" y="1076" class="task-sub">(Vân tay / FaceID thiết bị)</text>
+
+    <!-- Task: Cập nhật Sổ cái & Quyết định -->
+    <rect x="1315" y="1035" width="145" height="55" class="task-box" />
+    <text x="1387" y="1058" class="task-title">Lưu bảng decisions &amp;</text>
+    <text x="1387" y="1076" class="task-sub">Cập nhật bút toán Sổ cái</text>
+
+    <!-- Task: Kiểm toán chuỗi băm & Merkle Root -->
+    <rect x="1500" y="1035" width="155" height="55" class="task-box" />
+    <text x="1577" y="1058" class="task-title">Kiểm toán SHA-256 &amp;</text>
+    <text x="1577" y="1076" class="task-title" fill="#15803d">Tính toán Merkle Root</text>
+
+    <!-- End Event Chốt ca -->
+    <circle cx="1710" cy="1062" r="18" class="end-success" />
+    <text x="1710" y="1098" font-size="10" font-weight="bold" fill="#166534" text-anchor="middle">Chốt ca an toàn</text>
+
+    <!-- ============================================================ -->
+    <!-- SEQUENCE FLOWS & MESSAGE FLOWS (CLEAN, NO CROSSING)          -->
+    <!-- ============================================================ -->
+    <!-- Lane 2 Start -> Tạo đơn -->
+    <path d="M 248 385 L 285 385" class="seq-flow" />
+    <!-- Tạo đơn -> Yêu cầu VietQR -->
+    <path d="M 420 385 L 455 385" class="seq-flow" />
+    <!-- Yêu cầu VietQR -> Hiển thị QR -->
+    <path d="M 600 385 L 635 385" class="seq-flow" />
+
+    <!-- Hiển thị QR (Lane 2) -> Xem QR (Lane 1) [Message Flow Up] -->
+    <path d="M 707 355 L 707 195" class="msg-flow" />
+    <text x="715" y="270" class="flow-text">Xuất ảnh QR</text>
+
+    <!-- Khách xem QR -> Quét mã -->
+    <path d="M 780 165 L 815 165" class="seq-flow" />
+    <!-- Khách quét mã -> Xác nhận chuyển tiền -->
+    <path d="M 960 165 L 995 165" class="seq-flow" />
+
+    <!-- Khách xác nhận (Lane 1) -> Hạch toán NAPAS (Lane 3) [Message Flow Down] -->
+    <path d="M 1067 195 L 1067 570" class="msg-flow" />
+    <text x="1075" y="380" class="flow-text">Lệnh NAPAS 24/7</text>
+
+    <!-- Hạch toán NAPAS -> Ký HMAC -->
+    <path d="M 1140 600 L 1175 600" class="seq-flow" />
+    <!-- Ký HMAC -> Bắn Webhook Event -->
+    <path d="M 1325 600 L 1357 600" class="seq-flow" />
+
+    <!-- Webhook Event (Lane 3) -> Tiếp nhận Webhook (Lane 4) [Message Flow Down] -->
+    <path d="M 1375 618 L 1375 740" class="msg-flow" />
+    <text x="1385" y="675" class="flow-text">HTTP Webhook</text>
+
+    <!-- Tiếp nhận -> Gateway G1 (Chữ ký đúng?) -->
+    <path d="M 1450 767 L 1485 767" class="seq-flow" />
+    <!-- Gateway G1 -> 401 Unauthorized (Sai chữ ký) -->
+    <path d="M 1545 767 L 1614 767" class="seq-flow" />
+    <text x="1575" y="760" font-size="9" font-weight="bold" fill="#b91c1c">Sai</text>
+
+    <!-- Gateway G1 -> Idempotency & Đối soát 3 cấp (Đúng chữ ký) -->
+    <path d="M 1515 792 L 1515 874 L 1375 874" class="seq-flow" />
+    <text x="1520" y="815" font-size="9" font-weight="bold" fill="#15803d">Đúng</text>
+
+    <!-- Đối soát 3 cấp -> Gateway G2 (Kết quả) -->
+    <path d="M 1375 874 L 1410 874" class="seq-flow" />
+
+    <!-- Gateway G2 -> Cấp 1 (Exact Match) -->
+    <path d="M 1440 845 L 1440 836 L 1520 836" class="seq-flow" />
+    <!-- Gateway G2 -> Cấp 2 (Partial Match) -->
+    <path d="M 1470 874 L 1520 874" class="seq-flow" />
+    <!-- Gateway G2 -> Cấp 3 (Fuzzy Match) -->
+    <path d="M 1440 903 L 1440 936 L 1520 936" class="seq-flow" />
+
+    <!-- Cấp 1 -> Cập nhật Sổ cái SHA-256 -->
+    <path d="M 1655 836 L 1695 836" class="seq-flow" />
+    <!-- Cấp 3 -> Cập nhật Sổ cái SHA-256 -->
+    <path d="M 1655 936 L 1760 936 L 1760 870" class="seq-flow" />
+
+    <!-- Sổ cái SHA-256 -> Phát sự kiện SSE -->
+    <path d="M 1760 815 L 1760 780" class="seq-flow" />
+
+    <!-- Cấp 2 (Chuyển thiếu) -> Cảnh báo thiếu tiền quầy POS [Message Flow Up] -->
+    <path d="M 1587 865 L 1587 450 L 1050 450" class="msg-flow" />
+    <text x="1350" y="442" class="flow-text" fill="#d97706">Thiếu tiền</text>
+
+    <!-- SSE Event (Lane 4) -> Quầy POS nhận ĐÃ THU ĐỦ (Lane 2) [Message Flow Up] -->
+    <path d="M 1720 725 L 1720 320 L 1172 320 L 1172 355" class="msg-flow" />
+    <text x="1450" y="312" class="flow-text">SSE: PAID (Thời gian thực)</text>
+
+    <!-- Quầy POS: Nhận tín hiệu -> Đóng QR & In hóa đơn -->
+    <path d="M 1245 385 L 1285 385" class="seq-flow" />
+    <!-- Đóng QR -> Giao hàng -->
+    <path d="M 1430 385 L 1470 385" class="seq-flow" />
+    <!-- Giao hàng -> Giao dịch xong -->
+    <path d="M 1610 385 L 1647 385" class="seq-flow" />
+
+    <!-- Gateway G2 (Không khớp / Tiền treo) -> Lane 5 Kế toán [Flow Down] -->
+    <path d="M 1440 903 L 1440 1005 L 822 1005 L 822 1035" class="seq-flow" />
+    <text x="1100" y="997" class="flow-text" fill="#be185d">Không khớp (Tiền treo)</text>
+
+    <!-- Lane 5: Tiền treo -> Kế toán ghép đơn -->
+    <path d="M 895 1062 L 935 1062" class="seq-flow" />
+    <!-- Ghép đơn -> Ký WebAuthn -->
+    <path d="M 1080 1062 L 1120 1062" class="seq-flow" />
+    <!-- Ký WebAuthn -> Cập nhật Sổ cái & decisions -->
+    <path d="M 1275 1062 L 1315 1062" class="seq-flow" />
+    <!-- Cập nhật Sổ cái -> Kiểm toán Merkle Root -->
+    <path d="M 1460 1062 L 1500 1062" class="seq-flow" />
+    <!-- Kiểm toán Merkle Root -> Chốt ca an toàn -->
+    <path d="M 1655 1062 L 1692 1062" class="seq-flow" />
+
+</svg>
