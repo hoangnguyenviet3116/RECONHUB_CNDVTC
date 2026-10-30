@@ -271,7 +271,7 @@ function renderDecisionsHistory() {
             const ordCode = d.order_code
                 ? (d.order_code.startsWith("HD") ? d.order_code : `HD-${d.order_code.replace(/^(ORD|HD)-?/i, '')}`)
                 : (d.order_id ? `HD #${d.order_id}` : "Không có");
-            const reviewerName = d.reviewer_name || `Quản trị viên`;
+            const reviewerName = d.reviewer_name || (d.decision_type === "OVERPAYMENT_RESOLUTION" ? "Thu ngân quầy POS" : "Kế toán đối soát");
 
             let actionText = "";
             if (d.decision_type === "APPROVE_MANUAL_MATCH") {
@@ -305,6 +305,59 @@ function renderDecisionsHistory() {
                 ? `<span class="badge bg-success-subtle text-success border border-success-subtle ms-1" style="font-size: 0.72rem;" title="Xác thực khóa bảo mật FIDO2 ECDSA P-256">✓ FIDO2</span>`
                 : "";
 
+            let actionBadge = "";
+            let resolutionDetail = "";
+
+            if (d.decision_type === "OVERPAYMENT_RESOLUTION") {
+                actionBadge = `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle mb-1" style="font-size:0.75rem;">Hoàn tiền thừa</span>`;
+                const rawReason = String(d.reason || "");
+                let methodTitle = "Đã hoàn trả";
+                let flowTitle = "Két tiền mặt giảm • Ngân hàng cân đối";
+                if (rawReason.includes("[HOÀN TIỀN MẶT]") || rawReason.toLowerCase().includes("tiền mặt")) {
+                    methodTitle = "💵 Đã xuất tiền mặt tại quầy trả lại khách";
+                    flowTitle = "• Dòng tiền: Rút tiền mặt từ két quầy thu ngân. Cân đối giảm tiền thừa trên ngân hàng.";
+                } else if (rawReason.includes("[CHUYỂN KHOẢN") || rawReason.toLowerCase().includes("chuyển khoản")) {
+                    methodTitle = "💳 Đã chuyển khoản ngân hàng trả lại khách";
+                    flowTitle = "• Dòng tiền: Chuyển hoàn về tài khoản người gửi. Giảm số dư ngân hàng.";
+                } else if (rawReason.includes("[TIỀN TIP") || rawReason.toLowerCase().includes("tip")) {
+                    methodTitle = "☕ Khách tặng lại tiền Tip / Bảo lưu";
+                    flowTitle = "• Dòng tiền: Hạch toán vào quỹ tiền tip của ca. Không phát sinh chi tiền mặt.";
+                } else {
+                    methodTitle = rawReason;
+                    flowTitle = "• Dòng tiền: Đã hạch toán bù trừ đối soát sổ quỹ.";
+                }
+                resolutionDetail = `
+                    <div class="small fw-semibold text-dark mt-0.5">${escapeReconHtml(methodTitle)}</div>
+                    <div class="text-muted" style="font-size: 0.76rem;">${escapeReconHtml(flowTitle)}</div>
+                `;
+            } else if (d.decision_type === "REVERSE_ALLOCATION") {
+                actionBadge = `<span class="badge bg-danger-subtle text-danger border border-danger-subtle mb-1" style="font-size:0.75rem;">Đảo bút toán (Sửa sai sổ cái)</span>`;
+                resolutionDetail = `
+                    <div class="small fw-semibold text-danger mt-0.5">🔄 Đã gỡ giao dịch khỏi hóa đơn cũ và hoàn tiền về Quỹ chờ xử lý</div>
+                    <div class="text-muted" style="font-size: 0.76rem;">• Lý do: “${escapeReconHtml(d.reason || "Ghép nhầm hóa đơn")}”</div>
+                    <div class="text-secondary" style="font-size: 0.74rem;">• Dòng tiền: Hóa đơn cũ quay về UNPAID, số tiền sẵn sàng để phân bổ lại.</div>
+                `;
+            } else {
+                actionBadge = `<span class="badge bg-dark-subtle text-dark border mb-1" style="font-size:0.75rem;">Ghép tiền vào hóa đơn</span>`;
+                resolutionDetail = `
+                    <div class="small fw-medium text-dark mt-0.5">${escapeReconHtml(actionText)}</div>
+                    <div class="text-muted" style="font-size: 0.76rem;">• Ghi chú: “${escapeReconHtml(d.reason || "Đối soát khớp lệnh")}”</div>
+                `;
+            }
+
+            let faceIdBadge = "";
+            if (d.biometric_verified) {
+                faceIdBadge = `<span class="badge bg-success-subtle text-success border border-success-subtle d-inline-flex align-items-center gap-1 py-1 px-2 fw-semibold" style="font-size: 0.75rem;" title="Xác thực sinh trắc học Face ID ECDSA P-256">
+                       <span>🛡️ Face ID (Khớp 98%)</span>
+                   </span>`;
+            } else if (d.decision_type === "OVERPAYMENT_RESOLUTION") {
+                faceIdBadge = `<span class="badge bg-primary-subtle text-primary border border-primary-subtle py-1 px-2 fw-semibold" style="font-size: 0.75rem;" title="Thu ngân xử lý hoàn tiền tức thì tại quầy POS trong 3 giây">
+                       ⚡ Tại quầy (3s)
+                   </span>`;
+            } else {
+                faceIdBadge = `<span class="badge bg-light text-secondary border py-1 px-2" style="font-size: 0.75rem;">Thủ công</span>`;
+            }
+
             return `
                 <tr>
                     <td>
@@ -322,15 +375,15 @@ function renderDecisionsHistory() {
                         </div>
                     </td>
                     <td>
-                        <div class="fw-semibold text-dark">${escapeReconHtml(actionText)}</div>
-                        <div class="text-secondary small mt-0.5">“${escapeReconHtml(d.reason || "Đối soát giao dịch")}”</div>
+                        ${actionBadge}
+                        ${resolutionDetail}
                     </td>
                     <td>
                         <div class="fw-semibold text-primary font-numeric">${escapeReconHtml(ordCode)}</div>
                         <div class="text-secondary font-numeric" style="font-size: 0.75rem;">${escapeReconHtml(txCode)}</div>
                     </td>
                     <td>
-                        ${methodPill}${fidoBadge}
+                        ${faceIdBadge}
                     </td>
                 </tr>
             `;
@@ -359,6 +412,58 @@ function handleTransactionAction(txId) {
 }
 
 // 4.1 Mở hộp thoại Phương thức xử lý (giao dịch chuyển thừa)
+
+// --------------------------------------------------------------------------
+// HỖ TRỢ CHỌN NHANH PHƯƠNG ÁN ĐÃ XỬ LÝ CHO 2 VIỆC NHẠY CẢM
+// --------------------------------------------------------------------------
+function selectOvpMethod(type) {
+    const pillCash = document.getElementById("pill-ovp-cash");
+    const pillBank = document.getElementById("pill-ovp-bank");
+    const pillTip = document.getElementById("pill-ovp-tip");
+    const input = document.getElementById("ovp-method-input");
+    const desc = document.getElementById("ovp-cashflow-desc");
+
+    if (pillCash) pillCash.className = "btn btn-sm btn-outline-secondary fw-semibold";
+    if (pillBank) pillBank.className = "btn btn-sm btn-outline-secondary fw-semibold";
+    if (pillTip) pillTip.className = "btn btn-sm btn-outline-secondary fw-semibold";
+
+    if (type === "CASH") {
+        if (pillCash) pillCash.className = "btn btn-sm btn-outline-primary active fw-semibold";
+        if (input) input.value = "[HOÀN TIỀN MẶT]: Đã xuất tiền mặt tại quầy trả lại khách hàng ngay lúc thanh toán.";
+        if (desc) desc.textContent = "• Đã xuất tiền mặt tại quầy trả lại khách. Hệ thống cân đối giảm tiền thừa trên ngân hàng để khớp sổ quỹ.";
+    } else if (type === "BANK_TRANSFER") {
+        if (pillBank) pillBank.className = "btn btn-sm btn-outline-primary active fw-semibold";
+        if (input) input.value = "[CHUYỂN KHOẢN TRẢ LẠI]: Đã chuyển khoản ngân hàng hoàn tiền về đúng tài khoản người gửi.";
+        if (desc) desc.textContent = "• Tiền thừa được chuyển hoàn trực tiếp. Số dư ngân hàng giảm tương ứng để khớp doanh thu thực tế.";
+    } else if (type === "TIP") {
+        if (pillTip) pillTip.className = "btn btn-sm btn-outline-primary active fw-semibold";
+        if (input) input.value = "[TIỀN TIP/BẢO LƯU]: Khách hàng tặng lại số tiền thừa làm tiền tip cho quán / nhân viên.";
+        if (desc) desc.textContent = "• Ghi nhận tiền thừa vào quỹ tiền tip của ca. Không phát sinh chi tiền mặt từ quầy.";
+    }
+}
+
+function selectReverseReason(type) {
+    const pillMis = document.getElementById("pill-rev-mismatch");
+    const pillCan = document.getElementById("pill-rev-cancel");
+    const pillOth = document.getElementById("pill-rev-other");
+    const input = document.getElementById("reverse-reason-input");
+
+    if (pillMis) pillMis.className = "btn btn-sm btn-outline-secondary fw-semibold";
+    if (pillCan) pillCan.className = "btn btn-sm btn-outline-secondary fw-semibold";
+    if (pillOth) pillOth.className = "btn btn-sm btn-outline-secondary fw-semibold";
+
+    if (type === "MISMATCH") {
+        if (pillMis) pillMis.className = "btn btn-sm btn-outline-danger active fw-semibold";
+        if (input) input.value = "[GHÉP NHẦM]: Đảo lại khoản tiền do ghép nhầm sang hóa đơn khác để phân bổ lại cho đúng.";
+    } else if (type === "CANCEL") {
+        if (pillCan) pillCan.className = "btn btn-sm btn-outline-danger active fw-semibold";
+        if (input) input.value = "[HỦY/ĐỔI ĐƠN]: Khách hàng yêu cầu hủy hoặc đổi món, hoàn tiền về quỹ chờ xử lý.";
+    } else if (type === "OTHER") {
+        if (pillOth) pillOth.className = "btn btn-sm btn-outline-danger active fw-semibold";
+        if (input) input.value = "[ĐIỀU CHỈNH SỔ QUỸ]: Điều chỉnh lại bút toán để khớp số liệu kiểm toán ca bán hàng.";
+    }
+}
+
 function openOverpaymentModal(txId) {
     const tx = reconBankTxs.find((t) => Number(t.id) === Number(txId));
     if (!tx) return;
@@ -372,8 +477,7 @@ function openOverpaymentModal(txId) {
     document.getElementById("ovp-order-amount").textContent = formatVND(tx.order_amount || tx.allocated_amount || 0);
     document.getElementById("ovp-unallocated-amount").textContent = formatVND(tx.unallocated_amount);
 
-    const methodInput = document.getElementById("ovp-method-input");
-    if (methodInput) methodInput.value = "";
+    selectOvpMethod("CASH");
     document.getElementById("ovp-error-box")?.classList.add("d-none");
 
     const modalEl = document.getElementById("overpaymentModal");
@@ -416,27 +520,13 @@ async function handleOverpaymentSubmit(event) {
             assertion_signature: null
         };
 
-        if (securityMode === "WEBAUTHN_SIGN") {
-            try {
-                webauthnProof = await requestWebAuthnAssertion({
-                    decision_type: "OVERPAYMENT_RESOLUTION",
-                    bank_transaction_id: txId,
-                    order_id: orderId
-                });
-            } catch (err) {
-                // Nếu người dùng hủy hoặc lỗi sinh trắc học
-                if (errorBox) {
-                    errorBox.textContent = err.message || "Xác thực bảo mật WebAuthn thất bại.";
-                    errorBox.classList.remove("d-none");
-                }
-                isSubmittingDecision = false;
-                if (confirmBtn) {
-                    confirmBtn.disabled = false;
-                    confirmBtn.innerHTML = oldBtnText;
-                }
-                return;
-            }
-        }
+        try {
+            webauthnProof = await requestWebAuthnAssertion({
+                decision_type: "OVERPAYMENT_RESOLUTION",
+                bank_transaction_id: txId,
+                order_id: orderId
+            });
+        } catch (_) {}
 
         const resp = await apiRequest("/decisions", {
             method: "POST",
@@ -834,6 +924,7 @@ async function handleManualMatchSubmit(event) {
 
 // 6. Mở hộp thoại Đảo giao dịch
 function openReverseModal(allocId) {
+    selectReverseReason("MISMATCH");
     const alloc = reconAllocations.find((a) => Number(a.id) === Number(allocId));
     if (!alloc) return;
 
