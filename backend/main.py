@@ -1,9 +1,10 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from database import get_db
 from dependencies import verify_merchant_user
-from routers import shifts, orders, payment_requests, webhooks, mock_bank, decisions, dashboard, events
+from routers import shifts, orders, payment_requests, webhooks, mock_bank, decisions, dashboard, events, chatbot, auth
 
 import asyncio
 from database import SessionLocal
@@ -40,6 +41,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ==============================================================================
+# MIDDLEWARE TỰ ĐỘNG CHỐNG LƯU CACHE TRÌNH DUYỆT (NO-CACHE CONTROL)
+# ==============================================================================
+@app.middleware("http")
+async def disable_browser_cache_middleware(request: Request, call_next):
+    """
+    Tự động gắn tiêu đề Cache-Control: no-store, no-cache vào mọi phản hồi.
+    Đảm bảo trình duyệt luôn nhận file HTML, JS, CSS mới nhất, không bao giờ
+    lưu bản cũ trong bộ nhớ đệm (Cache) của máy người dùng.
+    """
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
+
 app.include_router(shifts.router)
 app.include_router(orders.router)
 app.include_router(payment_requests.router)
@@ -48,6 +66,8 @@ app.include_router(mock_bank.router)
 app.include_router(decisions.router)
 app.include_router(dashboard.router)
 app.include_router(events.router)
+app.include_router(chatbot.router)
+app.include_router(auth.router)
 
 
 # Các Alias Endpoint giúp tương thích 100% với mọi đường dẫn Fetch API trong frontend/js/*.js của Hoàng
@@ -95,3 +115,16 @@ def alias_shift_finance_summary(shift_id: str, db: Session = Depends(get_db), us
 def check_health():
     return {"status": "ok", "message": "VietQR ReconHub API is running smoothly!"}
 
+
+# Điều hướng link gốc http://localhost:8000 về trang Đăng nhập /login.html
+@app.get("/", include_in_schema=False)
+def root_redirect():
+    return RedirectResponse(url="/login.html", status_code=307)
+
+
+# Phục vụ toàn bộ giao diện Web Frontend qua http://localhost:8000
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+_frontend_dir = Path(__file__).resolve().parent.parent / "frontend"
+if _frontend_dir.exists():
+    app.mount("/", StaticFiles(directory=str(_frontend_dir), html=True), name="frontend")

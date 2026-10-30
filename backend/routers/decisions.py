@@ -293,7 +293,7 @@ def make_decision(
                 reason=reason,
                 challenge_used=challenge_used,
                 assertion_signature=assertion_signature,
-                biometric_verified=True
+                biometric_verified=auth_result.get("biometric_verified", False)
             )
             db.add(decision_rec)
             db.commit()
@@ -555,7 +555,7 @@ def make_decision(
             reason=method_plan,
             challenge_used=challenge_used,
             assertion_signature=assertion_signature,
-            biometric_verified=True
+            biometric_verified=auth_result.get("biometric_verified", False)
         )
         db.add(decision_rec)
         db.commit()
