@@ -202,7 +202,7 @@ async function startFaceScanningSession(actionContext = {}) {
             } else if (act === "OVERPAYMENT_RESOLUTION") {
                 titleEl.textContent = "Xác thực khuôn mặt để phê duyệt HOÀN TRẢ TIỀN THỪA.";
             } else {
-                titleEl.textContent = "Xác thực khuôn mặt để xác nhận quyết định tài chính.";
+                titleEl.textContent = "Xác thực khuôn mặt để phê duyệt GHÉP TIỀN ĐỐI SOÁT.";
             }
         }
         if (statusEl) statusEl.textContent = "Đang kết nối camera sinh trắc học...";
@@ -253,7 +253,7 @@ async function startFaceScanningSession(actionContext = {}) {
 
         let t2 = setTimeout(() => {
             if (isCancelled) return reject(new Error("Đã hủy bước xác thực khuôn mặt."));
-            if (statusEl) statusEl.textContent = "Khuôn mặt hợp lệ! Đang ký chữ ký số FIDO2...";
+            if (statusEl) statusEl.textContent = "Khuôn mặt hợp lệ! Đang ký xác thực bảo mật...";
             if (subtextEl) subtextEl.textContent = "Độ khớp sinh trắc học: 98.6% • Phê duyệt hợp lệ";
         }, 1100);
 
@@ -279,11 +279,16 @@ async function startFaceScanningSession(actionContext = {}) {
 // 3. XÁC NHẬN CHỮ KÝ SỐ SINH TRẮC HỌC (ASSERTION)
 // --------------------------------------------------------------------------
 async function requestWebAuthnAssertion(actionContext = {}) {
-    const isSensitive = actionContext.decision_type === "REVERSE_ALLOCATION";
+    const isReverse = actionContext.decision_type === "REVERSE_ALLOCATION";
 
-    // CHỈ BẬT CAMERA QUÉT MẶT NẾU LÀ ĐẢO BÚT TOÁN (NGHIỆP VỤ NHẠY CẢM CỦA KẾ TOÁN / QUẢN LÝ)
+    if (isReverse && getCurrentRole() === "CASHIER") {
+        throw new Error("Từ chối quyền hạn: Thu ngân không có quyền đảo bút toán (Chỉ dành cho Kế toán hoặc Chủ cửa hàng).");
+    }
+
+    // BẬT CAMERA QUÉT KHUÔN MẶT FACE ID CHO CÁC NGHIỆP VỤ PHÊ DUYỆT TÀI CHÍNH (ĐỐI SOÁT & ĐẢO BÚT TOÁN)
+    const requireFaceScan = actionContext.decision_type === "REVERSE_ALLOCATION" || actionContext.decision_type === "APPROVE_MANUAL_MATCH";
     let faceScanSession = null;
-    if (isSensitive) {
+    if (requireFaceScan) {
         try {
             faceScanSession = await startFaceScanningSession(actionContext);
         } catch (e) {

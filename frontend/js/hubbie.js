@@ -1,5 +1,5 @@
 // ==========================================================================
-// TRỢ LÝ VẬN HÀNH THUCHI AI / HUBBIE — VIETQR RECONHUB (frontend/js/hubbie.js)
+// TRỢ LÝ VẬN HÀNH HUBBIE / HUBBIE — VIETQR RECONHUB (frontend/js/hubbie.js)
 // Giao diện tương tác Chatbot thông minh hỗ trợ hỏi đáp thu chi và vận hành
 // ==========================================================================
 
@@ -19,7 +19,7 @@ const hubbieConversations = [
             {
                 sender: "bot",
                 time: "10:40",
-                text: `Chào Minh Anh! Tôi là trợ lý vận hành <strong>ThuChi AI</strong>. Tôi có thể giúp bạn kiểm tra doanh thu, tìm kiếm các hóa đơn chưa thu đủ, đối soát tiền ngân hàng hoặc rà soát chênh lệch sổ quỹ ca hôm nay.`
+                text: `Chào Minh Anh! Tôi là trợ lý vận hành <strong>Hubbie</strong>. Tôi có thể giúp bạn kiểm tra doanh thu, tìm kiếm các hóa đơn chưa thu đủ, đối soát tiền ngân hàng hoặc rà soát chênh lệch sổ quỹ ca hôm nay.`
             }
         ]
     },
@@ -188,9 +188,11 @@ function bindHubbieEvents() {
     });
 
     // 3.1. Đóng / Mở Sidebar lịch sử hội thoại (Collapsible)
-    document.getElementById("btn-toggle-sidebar")?.addEventListener("click", () => {
+    const handleToggleHubbieSidebar = () => {
         document.getElementById("hubbie-sidebar")?.classList.toggle("is-collapsed");
-    });
+    };
+    document.getElementById("btn-hubbie-toggle-sidebar")?.addEventListener("click", handleToggleHubbieSidebar);
+    document.getElementById("btn-toggle-sidebar")?.addEventListener("click", handleToggleHubbieSidebar);
     document.getElementById("btn-close-sidebar")?.addEventListener("click", () => {
         document.getElementById("hubbie-sidebar")?.classList.add("is-collapsed");
     });
@@ -233,16 +235,16 @@ function bindHubbieEvents() {
     document.getElementById("btn-export-chat")?.addEventListener("click", () => {
         const msgs = document.querySelectorAll(".hubbie-bot-bubble, .hubbie-user-bubble");
         if (msgs.length === 0) return;
-        let content = "=== TRỢ LÝ THUCHI AI / RECONHUB — BẢN TÓM TẮT HỘI THOẠI ===\n\n";
+        let content = "=== TRỢ LÝ HUBBIE / RECONHUB — BẢN TÓM TẮT HỘI THOẠI ===\n\n";
         msgs.forEach((m) => {
             const isUser = m.classList.contains("hubbie-user-bubble");
-            const sender = isUser ? "NGƯỜI DÙNG" : "THUCHI AI";
+            const sender = isUser ? "NGƯỜI DÙNG" : "HUBBIE";
             content += `[${sender}]: ${m.innerText.trim()}\n\n`;
         });
         const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = `ThuChi_AI_Transcript_${Date.now()}.txt`;
+        a.download = `Hubbie_Transcript_${Date.now()}.txt`;
         a.click();
         showToast("Đã xuất tóm tắt hội thoại thành công.", "success");
     });
@@ -444,6 +446,17 @@ async function handleUserSendMessage(userText) {
     const welcomeHero = document.getElementById("hubbie-welcome-hero");
     if (welcomeHero) welcomeHero.remove();
 
+        // Xác định tên và vai trò thực tế của người dùng đang đăng nhập
+    const currentUser = typeof getLoggedInUser === "function" ? getLoggedInUser() : null;
+    const roleTitleMap = {
+        OWNER: "Chủ cửa hàng",
+        REVIEWER: "Kế toán",
+        CASHIER: "Thu ngân"
+    };
+    const roleKey = (currentUser?.role || (typeof getCurrentRole === "function" ? getCurrentRole() : "OWNER")).toUpperCase();
+    const userRoleName = roleTitleMap[roleKey] || "Người dùng";
+    const userDisplayName = currentUser?.full_name ? `${currentUser.full_name} (${userRoleName})` : `Bạn (${userRoleName})`;
+
     // 1. Thêm bong bóng tin nhắn của User
     const userMsgHtml = `
         <div class="hubbie-msg-user">
@@ -455,7 +468,7 @@ async function handleUserSendMessage(userText) {
             <div>
                 <div class="d-flex align-items-center justify-content-end gap-2 mb-1">
                     <span class="text-secondary small font-numeric" style="font-size: 0.72rem;">${timeStr}</span>
-                    <strong class="text-dark small fw-bold">Bạn (Thu ngân)</strong>
+                    <strong class="text-dark small fw-bold">${escapeHtml(userDisplayName)}</strong>
                 </div>
                 <div class="hubbie-user-bubble">
                     ${escapeHtml(userText)}
@@ -499,12 +512,12 @@ async function handleUserSendMessage(userText) {
             </div>
             <div>
                 <div class="d-flex align-items-center gap-2 mb-1">
-                    <strong class="text-dark small fw-bold">ThuChi AI</strong>
+                    <strong class="text-dark small fw-bold">Hubbie</strong>
                     <span class="text-secondary small font-numeric" style="font-size: 0.72rem;">Đang suy luận qua AI...</span>
                 </div>
                 <div class="hubbie-bot-bubble text-secondary fst-italic">
                     <span class="spinner-grow spinner-grow-sm text-primary me-1" role="status" style="width: 10px; height: 10px;"></span>
-                    ThuChi AI đang rà soát dữ liệu sổ quỹ và suy luận qua Ollama Llama 3.2...
+                    Hubbie đang rà soát dữ liệu sổ quỹ và suy luận qua Ollama Llama 3.2...
                 </div>
             </div>
         </div>
@@ -580,7 +593,7 @@ async function handleUserSendMessage(userText) {
             </div>
             <div>
                 <div class="d-flex align-items-center gap-2 mb-1">
-                    <strong class="text-dark small fw-bold">ThuChi AI</strong>
+                    <strong class="text-dark small fw-bold">Hubbie</strong>
                     ${engineBadge}
                     <span class="text-secondary small font-numeric" style="font-size: 0.72rem;">${timeStr}</span>
                 </div>
@@ -766,7 +779,7 @@ function generateSmartBotReply(prompt) {
     // Câu trả lời tổng quát thông minh
     return `
         Dạ, tôi đã ghi nhận câu hỏi của bạn: <em>"${escapeHtml(prompt)}"</em>.
-        <br><br>Với vai trò là trợ lý ảo <strong>ThuChi AI</strong>, tôi được kết nối trực tiếp với Sổ quỹ điện tử ReconHub. Bạn có thể nhấn nhanh vào các gợi ý bên dưới hoặc hỏi tôi về:
+        <br><br>Với vai trò là trợ lý ảo <strong>Hubbie</strong>, tôi được kết nối trực tiếp với Sổ quỹ điện tử ReconHub. Bạn có thể nhấn nhanh vào các gợi ý bên dưới hoặc hỏi tôi về:
         <br>• <code>Tóm tắt doanh thu hôm nay</code>
         <br>• <code>Hóa đơn nào chưa thu đủ?</code>
         <br>• <code>Kiểm tra tiền chênh lệch đối soát</code>
@@ -857,6 +870,16 @@ function switchActiveConversation(convId) {
         </div>
     `;
 
+        const currentUser = typeof getLoggedInUser === "function" ? getLoggedInUser() : null;
+    const roleTitleMap = {
+        OWNER: "Chủ cửa hàng",
+        REVIEWER: "Kế toán",
+        CASHIER: "Thu ngân"
+    };
+    const roleKey = (currentUser?.role || (typeof getCurrentRole === "function" ? getCurrentRole() : "OWNER")).toUpperCase();
+    const userRoleName = roleTitleMap[roleKey] || "Người dùng";
+    const userDisplayName = currentUser?.full_name ? `${currentUser.full_name} (${userRoleName})` : `Bạn (${userRoleName})`;
+
     conv.messages.forEach((m) => {
         if (m.sender === "user") {
             container.insertAdjacentHTML("beforeend", `
@@ -869,7 +892,7 @@ function switchActiveConversation(convId) {
                     <div>
                         <div class="d-flex align-items-center justify-content-end gap-2 mb-1">
                             <span class="text-secondary small font-numeric" style="font-size: 0.72rem;">${escapeHtml(m.time)}</span>
-                            <strong class="text-dark small fw-bold">Bạn</strong>
+                            <strong class="text-dark small fw-bold">${escapeHtml(userDisplayName)}</strong>
                         </div>
                         <div class="hubbie-user-bubble">
                             ${escapeHtml(m.text)}
@@ -887,7 +910,7 @@ function switchActiveConversation(convId) {
                     </div>
                     <div>
                         <div class="d-flex align-items-center gap-2 mb-1">
-                            <strong class="text-dark small fw-bold">ThuChi AI</strong>
+                            <strong class="text-dark small fw-bold">Hubbie</strong>
                             <span class="text-secondary small font-numeric" style="font-size: 0.72rem;">${escapeHtml(m.time)}</span>
                         </div>
                         <div class="hubbie-bot-bubble">
@@ -911,7 +934,7 @@ function renderWelcomeHeroHtml() {
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0 3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"/>
                 </svg>
             </div>
-            <h2 class="h5 fw-bold text-dark mb-1">ThuChi AI Copilot</h2>
+            <h2 class="h5 fw-bold text-dark mb-1">Hubbie</h2>
             <p class="text-secondary small mb-4 mx-auto" style="max-width: 480px; font-size: 0.82rem; line-height: 1.5;">
                 Trợ lý vận hành tài chính &amp; đối soát tự động ReconHub. Hỏi đáp thu chi, truy xét ca lưu trữ và trực quan hóa tức thì.
             </p>

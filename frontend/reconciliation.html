@@ -50,6 +50,9 @@
                 </div>
             </div>
 
+            <!-- KHU VỰC THÔNG BÁO DÒNG TIỀN NỔI BẬT (HIGHLIGHT BANNER) -->
+            <div id="recon-alert-container"></div>
+
             <!-- THANH ĐIỀU HƯỚNG DẠNG VIÊN THUỐC (PILL TABS) -->
             <div class="mb-4">
                 <div class="recon-pill-nav" id="reconTabs" role="tablist">
@@ -222,8 +225,8 @@
                         <div class="mb-3">
                             <label for="match-security-mode" class="form-label small text-secondary mb-1">Xác thực phê duyệt</label>
                             <select id="match-security-mode" class="form-select form-select-sm">
-                                <option value="WEBAUTHN_SIGN">Xác nhận bằng khóa bảo mật thiết bị (Vân tay / Mã PIN)</option>
-                                <option value="BYPASS_WEBAUTHN_TEST">Thử nghiệm: Gửi yêu cầu không qua khóa bảo mật</option>
+                                <option value="WEBAUTHN_SIGN">Xác nhận bằng Face ID</option>
+                                <option value="BYPASS_WEBAUTHN_TEST">Thử nghiệm: Không quét Face ID</option>
                             </select>
                         </div>
 
@@ -231,8 +234,8 @@
 
                         <div class="d-flex justify-content-end gap-2 mt-3">
                             <button type="button" class="btn-fp-outline" data-bs-dismiss="modal">Hủy</button>
-                            <button type="submit" class="btn-fp-success" id="btn-confirm-match">
-                                Xác nhận
+                            <button type="submit" class="btn-fp-success fw-bold px-3 py-2" id="btn-confirm-match" style="border-radius: 10px;">
+                                🛡️ Quét Face ID &amp; Xác nhận
                             </button>
                         </div>
                     </form>
@@ -281,55 +284,33 @@
                             </div>
                         </div>
 
-                        <!-- CÁC NÚT CHỌN NHANH PHƯƠNG ÁN ĐÃ XỬ LÝ -->
+                        <!-- PHƯƠNG THỨC XỬ LÝ TIỀN THỪA (TINH GỌN) -->
                         <div class="mb-3">
-                            <label class="form-label small fw-semibold text-dark mb-1.5">
-                                Khoản tiền thừa này đã được xử lý như thế nào? <span class="text-danger">*</span>
+                            <label class="form-label small fw-semibold text-dark mb-2">
+                                Hình thức hoàn tiền thừa <span class="text-danger">*</span>
                             </label>
-                            <div class="d-flex flex-wrap gap-2 mb-2" id="ovp-quick-pills">
+                            <div class="d-flex flex-wrap gap-2 mb-2.5" id="ovp-quick-pills">
                                 <button type="button" class="btn btn-sm btn-outline-primary active fw-semibold" id="pill-ovp-cash" onclick="selectOvpMethod('CASH')">
-                                    💵 Hoàn tiền mặt tại quầy
+                                    💵 Hoàn tiền mặt
                                 </button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold" id="pill-ovp-bank" onclick="selectOvpMethod('BANK_TRANSFER')">
-                                    💳 Chuyển khoản trả lại khách
+                                    💳 Chuyển khoản lại
                                 </button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold" id="pill-ovp-tip" onclick="selectOvpMethod('TIP')">
                                     ☕ Tiền Tip / Trừ đơn sau
                                 </button>
                             </div>
-                            <textarea id="ovp-method-input" class="form-control" rows="2" required placeholder="Ghi chú chi tiết phương thức hoàn tiền..."></textarea>
-                        </div>
-
-                        <!-- TÓM TẮT DÒNG TIỀN DỊCH CHUYỂN RÕ RÀNG -->
-                        <div class="p-2.5 rounded-3 border small mb-3" style="background: #f0fdf4; border-color: #bbf7d0 !important;">
-                            <div class="d-flex align-items-center gap-1.5 text-success fw-bold">
-                                <span>⚖️ Hạch toán dòng tiền đối soát:</span>
-                            </div>
-                            <div class="text-dark mt-1" id="ovp-cashflow-desc" style="font-size: 0.8rem;">
-                                • Đã xuất tiền mặt tại quầy trả lại khách. Hệ thống cân đối giảm tiền thừa trên ngân hàng để khớp sổ quỹ.
-                            </div>
-                        </div>
-
-                        <!-- THÔNG TIN PHÊ DUYỆT TỨC THÌ TẠI QUẦY -->
-                        <div class="p-2.5 rounded-3 border small mb-3" style="background: #f8fafc; border-color: #e2e8f0 !important;">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <span class="text-secondary fw-semibold">⚡ Phê duyệt tại quầy:</span>
-                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-0.5" style="font-size: 0.75rem;">
-                                    Thu ngân POS (3 giây)
-                                </span>
-                            </div>
-                            <div class="text-muted mt-1" style="font-size: 0.78rem;">
-                                Thao tác hoàn tiền tức thì để khách không phải chờ đợi. Không bắt buộc Face ID; hệ thống tự động ghi nhận nhật ký hạch toán.
-                            </div>
+                            <label class="form-label small text-secondary mb-1">Ghi chú xử lý:</label>
+                            <input type="text" id="ovp-method-input" class="form-control" required placeholder="Ghi chú chi tiết phương thức hoàn tiền..." value="Hoàn tiền mặt tại quầy">
                             <input type="hidden" id="ovp-security-mode" value="POS_CASHIER_INSTANT">
                         </div>
 
                         <div id="ovp-error-box" class="alert alert-danger py-2 px-3 small d-none" role="alert"></div>
 
-                        <div class="d-flex justify-content-end gap-2 mt-3">
-                            <button type="button" class="btn-fp-outline" data-bs-dismiss="modal">Hủy</button>
+                        <div class="d-flex justify-content-end gap-2 mt-3 pt-2">
+                            <button type="button" class="btn-fp-outline px-3" data-bs-dismiss="modal">Hủy</button>
                             <button type="submit" class="btn-fp-success fw-bold px-3 py-2" id="btn-confirm-ovp" style="border-radius: 10px;">
-                                ✓ Hoàn tiền ngay cho khách (3s)
+                                ✓ Xác nhận hoàn tiền
                             </button>
                         </div>
                     </form>
@@ -365,19 +346,10 @@
                             </div>
                         </div>
 
-                        <!-- CẢNH BÁO DÒNG TIỀN VÀ TRẠNG THÁI RÕ RÀNG -->
-                        <div class="p-2.5 rounded-3 border small mb-3" style="background: #fef2f2; border-color: #fecaca !important;">
-                            <div class="text-danger fw-bold mb-1">⚠️ Quy trình dòng tiền dịch chuyển sau khi đảo:</div>
-                            <div class="text-dark small" style="font-size: 0.8rem;">
-                                <div>1. Hóa đơn cũ bị rút tiền ra và chuyển trạng thái về <strong>CHƯA THANH TOÁN (UNPAID)</strong>.</div>
-                                <div class="mt-0.5">2. Toàn bộ số tiền được hoàn trả về <strong>KHOẢN TIỀN CHỜ XỬ LÝ</strong> để phân bổ lại cho đúng đơn.</div>
-                            </div>
-                        </div>
-
-                        <!-- CHỌN NHANH LÝ DO ĐẢO -->
+                        <!-- LÝ DO ĐIỀU CHỈNH BÚT TOÁN (TINH GỌN) -->
                         <div class="mb-3">
-                            <label class="form-label small fw-semibold text-dark mb-1.5">Lý do điều chỉnh bút toán <span class="text-danger">*</span></label>
-                            <div class="d-flex flex-wrap gap-2 mb-2" id="rev-quick-pills">
+                            <label class="form-label small fw-semibold text-dark mb-2">Lý do điều chỉnh bút toán <span class="text-danger">*</span></label>
+                            <div class="d-flex flex-wrap gap-2 mb-2.5" id="rev-quick-pills">
                                 <button type="button" class="btn btn-sm btn-outline-danger active fw-semibold" id="pill-rev-mismatch" onclick="selectReverseReason('MISMATCH')">
                                     Ghép nhầm hóa đơn
                                 </button>
@@ -388,19 +360,18 @@
                                     Lý do khác
                                 </button>
                             </div>
-                            <textarea id="reverse-reason-input" class="form-control" rows="2" required placeholder="Ghi rõ lý do đảo bút toán..."></textarea>
+                            <label class="form-label small text-secondary mb-1">Ghi chú điều chỉnh:</label>
+                            <input type="text" id="reverse-reason-input" class="form-control" required placeholder="Ghi rõ lý do đảo bút toán..." value="Ghép nhầm hóa đơn">
                         </div>
 
                         <div class="p-2.5 rounded-3 bg-light border small text-secondary mb-3 d-flex align-items-center gap-2">
-                            <span style="font-size: 1.3rem;">🛡️</span>
-                            <div>
-                                <span class="fw-semibold text-dark">Xác thực Kế toán / Quản lý:</span> Bắt buộc quét khuôn mặt <strong>Face ID</strong> để niêm phong trách nhiệm điều chỉnh sổ cái bất biến.
-                            </div>
+                            <span style="font-size: 1.1rem;">🛡️</span>
+                            <span style="font-size: 0.82rem;">Yêu cầu xác thực <strong>Face ID</strong> để niêm phong sổ cái sau khi đảo.</span>
                         </div>
 
                         <div id="reverse-error-box" class="alert alert-danger py-2 px-3 small d-none" role="alert"></div>
 
-                        <div class="d-flex justify-content-end gap-2 mt-3">
+                        <div class="d-flex justify-content-end gap-2 mt-3 pt-2">
                             <button type="button" class="btn-fp-outline" data-bs-dismiss="modal">Hủy</button>
                             <button type="submit" class="btn-fp-dark fw-bold px-3 py-2" id="btn-confirm-reverse" style="border-radius: 10px;">
                                 🛡️ Quét Face ID &amp; Đảo bút toán
