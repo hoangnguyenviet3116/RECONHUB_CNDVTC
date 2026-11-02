@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Hình 3: Kiến trúc phân tầng hệ thống VietQR ReconHub (Bản chuẩn tinh giản)</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 24px;
+      background: #f1f5f9;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+    .wrapper {
+      max-width: 1000px;
+      width: 100%;
+      background: #ffffff;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+      border-radius: 12px;
+      padding: 12px;
+    }
+    svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <svg id="architecture-diagram" viewBox="0 0 1000 648" xmlns="http://www.w3.org/2000/svg" style="background:#ffffff; font-family:'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <!-- Soft Shadows -->
+    <filter id="soft-shadow" x="-2%" y="-3%" width="104%" height="108%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.06"/>
+    </filter>
+    <filter id="header-shadow" x="-1%" y="-3%" width="102%" height="108%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <!-- ============================================================ -->
+  <!-- 0. TIÊU ĐỀ HỆ THỐNG (HEADER)                                 -->
+  <!-- ============================================================ -->
+  <rect x="25" y="12" width="950" height="44" rx="7" fill="#0f172a" filter="url(#header-shadow)"/>
+  <text x="500" y="31" fill="#ffffff" font-size="13.5" font-weight="700" text-anchor="middle" letter-spacing="0.3">HÌNH 3: KIẾN TRÚC PHÂN TẦNG HỆ THỐNG FINTECH VIETQR RECONHUB</text>
+  <text x="500" y="47" fill="#94a3b8" font-size="10" font-weight="500" text-anchor="middle">Mô hình Client–Server 3 tầng tích hợp Đối soát tự động, Sinh trắc học &amp; Sổ cái Mật mã học</text>
+
+  <!-- ============================================================ -->
+  <!-- 1. TẦNG 1: GIAO DIỆN NGƯỜI DÙNG (FRONTEND CLIENT APPLICATION) -->
+  <!-- ============================================================ -->
+  <rect x="25" y="66" width="950" height="120" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2" filter="url(#soft-shadow)"/>
+  
+  <!-- Header Bar Tầng 1 (Khoảng cách an toàn > 120px) -->
+  <path d="M 25 74 Q 25 66 33 66 L 967 66 Q 975 66 975 74 L 975 88 L 25 88 Z" fill="#f1f5f9"/>
+  <text x="40" y="80" fill="#0f172a" font-size="10.5" font-weight="700">TẦNG 1: GIAO DIỆN NGƯỜI DÙNG (FRONTEND CLIENT APPLICATION)</text>
+  <text x="960" y="79" fill="#475569" font-size="8.5" font-weight="600" text-anchor="end">HTML5 • CSS3 • JS ES6+ • Bootstrap 5 • Web Speech API • Chart.js</text>
+  <line x1="25" y1="88" x2="975" y2="88" stroke="#cbd5e1" stroke-width="1"/>
+
+  <!-- Card 1.1: Quầy Thu Ngân POS (x=40 to 338, Center = 189) -->
+  <g transform="translate(40, 94)">
+    <rect width="298" height="84" rx="5" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.1" filter="url(#soft-shadow)"/>
+    <rect width="298" height="20" rx="5" fill="#dcfce7"/>
+    <path d="M 0 14 L 0 20 L 298 20 L 298 14 Z" fill="#dcfce7"/>
+    <text x="149" y="14" fill="#15803d" font-size="10" font-weight="700" text-anchor="middle">1. Quầy Thu Ngân POS &amp; Trải Nghiệm Khách</text>
+    <text x="12" y="34" fill="#1e293b" font-size="9">• Lập đơn bán hàng, tự khóa cứng số tiền vào VietQR động</text>
+    <text x="12" y="47" fill="#1e293b" font-size="9">• Nhận tín hiệu thanh toán tức thì qua luồng SSE &lt; 100ms</text>
+    <text x="12" y="60" fill="#1e293b" font-size="9">• Loa Web Speech API đọc to số tiền bằng tiếng Việt</text>
+    <rect x="12" y="66" width="274" height="13" rx="3" fill="#f0fdf4"/>
+    <text x="149" y="76" fill="#166534" font-size="8.2" font-weight="600" text-anchor="middle">Vai trò: Nhân viên Thu ngân (pos.html / pos.js)</text>
+  </g>
+
+  <!-- Card 1.2: Kế Toán Đối Soát Lệch (x=351 to 649, Center = 500) -->
+  <g transform="translate(351, 94)">
+    <rect width="298" height="84" rx="5" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.1" filter="url(#soft-shadow)"/>
+    <rect width="298" height="20" rx="5" fill="#fef3c7"/>
+    <path d="M 0 14 L 0 20 L 298 20 L 298 14 Z" fill="#fef3c7"/>
+    <text x="149" y="14" fill="#b45309" font-size="10" font-weight="700" text-anchor="middle">2. Màn Hình Kế Toán &amp; Duyệt Đối Soát Lệch</text>
+    <text x="12" y="34" fill="#1e293b" font-size="9">• Tra cứu danh sách tiền treo, sai nội dung hoặc chuyển thiếu</text>
+    <text x="12" y="47" fill="#1e293b" font-size="9">• Bấm ghép đơn thủ công kèm giải trình nghiệp vụ</text>
+    <text x="12" y="60" fill="#1e293b" font-size="9">• Xác thực danh tính sinh trắc học vân tay / khuôn mặt FIDO2</text>
+    <rect x="12" y="66" width="274" height="13" rx="3" fill="#fffbeb"/>
+    <text x="149" y="76" fill="#92400e" font-size="8.2" font-weight="600" text-anchor="middle">Vai trò: Kế toán đối soát (reconciliation.html)</text>
+  </g>
+
+  <!-- Card 1.3: Quản Lý & Báo Cáo Ca (x=662 to 960, Center = 811) -->
+  <g transform="translate(662, 94)">
+    <rect width="298" height="84" rx="5" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.1" filter="url(#soft-shadow)"/>
+    <rect width="298" height="20" rx="5" fill="#e0e7ff"/>
+    <path d="M 0 14 L 0 20 L 298 20 L 298 14 Z" fill="#e0e7ff"/>
+    <text x="149" y="14" fill="#4338ca" font-size="10" font-weight="700" text-anchor="middle">3. Quản Lý Ca, Báo Cáo &amp; AI Copilot</text>
+    <text x="12" y="34" fill="#1e293b" font-size="9">• Mở ca bán hàng, cam kết chỉ tiêu KPI doanh thu</text>
+    <text x="12" y="47" fill="#1e293b" font-size="9">• Dashboard đối chiếu 4 chỉ tiêu quỹ &amp; chốt ca Merkle</text>
+    <text x="12" y="60" fill="#1e293b" font-size="9">• Trợ lý ảo AI Copilot phân tích doanh thu theo ca</text>
+    <rect x="12" y="66" width="274" height="13" rx="3" fill="#eef2ff"/>
+    <text x="149" y="76" fill="#3730a3" font-size="8.2" font-weight="600" text-anchor="middle">Vai trò: Chủ quán / Quản lý (dashboard.html)</text>
+  </g>
+
+  <!-- ============================================================ -->
+  <!-- GIAO THỨC TRUYỀN THÔNG (NETWORK & COMMUNICATION BUS)        -->
+  <!-- TINH GỌN TUYỆT ĐỐI: MỖI CỘT ĐÚNG 1 MŨI TÊN 2 CHIỀU TẠI TÂM   -->
+  <!-- HOÀN TOÀN LOẠI BỎ MŨI TÊN KÉP PHỤ DÀY ĐẶC Ở 2 BÊN           -->
+  <!-- ============================================================ -->
+
+  <!-- CỘT 1: Quầy POS <-> Backend (Tâm x=189) -->
+  <line x1="189" y1="186" x2="189" y2="204" stroke="#2563eb" stroke-width="2"/>
+  <polygon points="189,186 185,195 193,195" fill="#2563eb"/>
+  <line x1="189" y1="228" x2="189" y2="246" stroke="#2563eb" stroke-width="2"/>
+  <polygon points="189,246 185,237 193,237" fill="#2563eb"/>
+
+  <!-- Khung nhãn trung tâm Cột 1 (x=60 đến 318, rộng 258px) -->
+  <rect x="60" y="204" width="258" height="24" rx="4" fill="#ffffff" stroke="#93c5fd" stroke-width="1.2" filter="url(#soft-shadow)"/>
+  <text x="189" y="219.5" font-size="8.5" font-weight="700" text-anchor="middle">
+    <tspan fill="#1d4ed8">HTTPS REST (Tạo đơn)</tspan>
+    <tspan fill="#94a3b8"> • </tspan>
+    <tspan fill="#15803d">SSE (Báo có &lt; 100ms)</tspan>
+  </text>
+
+  <!-- CỘT 2: Kế toán <-> Backend (Tâm x=500) -->
+  <line x1="500" y1="186" x2="500" y2="204" stroke="#d97706" stroke-width="2"/>
+  <polygon points="500,186 496,195 504,195" fill="#d97706"/>
+  <line x1="500" y1="228" x2="500" y2="246" stroke="#d97706" stroke-width="2"/>
+  <polygon points="500,246 496,237 504,237" fill="#d97706"/>
+
+  <!-- Khung nhãn trung tâm Cột 2 (x=371 đến 629, rộng 258px) -->
+  <rect x="371" y="204" width="258" height="24" rx="4" fill="#ffffff" stroke="#fcd34d" stroke-width="1.2" filter="url(#soft-shadow)"/>
+  <text x="500" y="219.5" fill="#b45309" font-size="8.5" font-weight="700" text-anchor="middle">HTTPS REST API • Ký duyệt FIDO2 WebAuthn</text>
+
+  <!-- CỘT 3: Quản trị Dashboard <-> Backend (Tâm x=811) -->
+  <!-- ĐÃ LOẠI BỎ CHỮ 'Webhook HMAC' Ở ĐÂY VÌ WEBHOOK ĐẾN TỪ CỔNG NGÂN HÀNG, KHÔNG PHẢI TỪ DASHBOARD -->
+  <line x1="811" y1="186" x2="811" y2="204" stroke="#4338ca" stroke-width="2"/>
+  <polygon points="811,186 807,195 815,195" fill="#4338ca"/>
+  <line x1="811" y1="228" x2="811" y2="246" stroke="#4338ca" stroke-width="2"/>
+  <polygon points="811,246 807,237 815,237" fill="#4338ca"/>
+
+  <!-- Khung nhãn trung tâm Cột 3 (x=682 đến 940, rộng 258px) -->
+  <rect x="682" y="204" width="258" height="24" rx="4" fill="#ffffff" stroke="#c7d2fe" stroke-width="1.2" filter="url(#soft-shadow)"/>
+  <text x="811" y="219.5" font-size="8.5" font-weight="700" text-anchor="middle">
+    <tspan fill="#3730a3">HTTPS REST API</tspan>
+    <tspan fill="#94a3b8"> • </tspan>
+    <tspan fill="#4338ca">Báo cáo ca &amp; AI Copilot</tspan>
+  </text>
+
+  <!-- ============================================================ -->
+  <!-- 2. TẦNG 2: XỬ LÝ NGHIỆP VỤ TRUNG TÂM (BACKEND SERVICES)    -->
+  <!-- ============================================================ -->
+  <rect x="25" y="246" width="950" height="150" rx="8" fill="#f0fdf4" stroke="#86efac" stroke-width="1.2" filter="url(#soft-shadow)"/>
+  
+  <!-- Header Bar Tầng 2 (Khoảng cách an toàn > 120px) -->
+  <path d="M 25 254 Q 25 246 33 246 L 967 246 Q 975 246 975 254 L 975 268 L 25 268 Z" fill="#dcfce7"/>
+  <text x="40" y="260" fill="#14532d" font-size="10.5" font-weight="700">TẦNG 2: XỬ LÝ NGHIỆP VỤ TRUNG TÂM (BACKEND SERVICES — FASTAPI)</text>
+  <text x="960" y="259" fill="#166534" font-size="8.5" font-weight="600" text-anchor="end">Python 3.11 • FastAPI • Pydantic • Uvicorn • RapidFuzz C++ • Cryptography</text>
+  <line x1="25" y1="268" x2="975" y2="268" stroke="#86efac" stroke-width="1"/>
+
+  <!-- Card 2.1: Xác Thực Webhook Biên Giới (Center = 189) -->
+  <g transform="translate(40, 274)">
+    <rect width="298" height="112" rx="5" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.1" filter="url(#soft-shadow)"/>
+    <rect width="298" height="20" rx="5" fill="#f8fafc"/>
+    <path d="M 0 14 L 0 20 L 298 20 L 298 14 Z" fill="#f8fafc"/>
+    <text x="149" y="14" fill="#0f172a" font-size="10" font-weight="700" text-anchor="middle">Xác Thực Webhook &amp; Bảo Mật Biên Giới</text>
+    <text x="12" y="35" fill="#1e293b" font-size="9">• Nhận POST biến động số dư từ cổng ngân hàng</text>
+    <text x="12" y="50" fill="#1e293b" font-size="9">• Xác thực chữ ký số HMAC-SHA256 (hmac_security.py)</text>
+    <text x="12" y="65" fill="#1e293b" font-size="9">• Chống Replay: Cửa sổ thời gian hợp lệ Δt ≤ 300s</text>
+    <text x="12" y="80" fill="#1e293b" font-size="9">• Khóa Idempotency chống ghi nhận giao dịch trùng lặp</text>
+    <rect x="12" y="90" width="274" height="15" rx="3" fill="#eff6ff"/>
+    <text x="149" y="101" fill="#1e40af" font-size="8.5" font-weight="600" text-anchor="middle">Bảo mật Open Banking &amp; Chuẩn NAPAS VietQR</text>
+  </g>
+
+  <!-- Card 2.2: Động Cơ Đối Soát Tự Động (Center = 500) -->
+  <g transform="translate(351, 274)">
+    <rect width="298" height="112" rx="5" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.1" filter="url(#soft-shadow)"/>
+    <rect width="298" height="20" rx="5" fill="#f8fafc"/>
+    <path d="M 0 14 L 0 20 L 298 20 L 298 14 Z" fill="#f8fafc"/>
+    <text x="149" y="14" fill="#0f172a" font-size="10" font-weight="700" text-anchor="middle">Động Cơ Đối Soát Tự Động 3 Tầng Lõi AI</text>
+    <text x="12" y="35" fill="#1e293b" font-size="9">• Tầng 1 (Regex): Sửa lỗi ký tự quang học (O/0, I/1)</text>
+    <text x="12" y="50" fill="#1e293b" font-size="9">• Tầng 2 (RapidFuzz C++): Chấm điểm mờ đa tiêu chí</text>
+    <text x="12" y="65" fill="#1e293b" font-size="9">• Tầng 3 (Subset-Sum): Giải thuật nhánh cận tách gộp</text>
+    <text x="12" y="80" fill="#1e293b" font-size="9">• Nghiệm duy nhất gạch nợ 100%; Treo đơn nếu trùng</text>
+    <rect x="12" y="90" width="274" height="15" rx="3" fill="#ecfdf5"/>
+    <text x="149" y="101" fill="#065f46" font-size="8.5" font-weight="600" text-anchor="middle">Trụ cột: AI &amp; Machine Learning (reconciliation_engine.py)</text>
+  </g>
+
+  <!-- Card 2.3: Sổ Cái, Biometrics & RegTech (Center = 811) -->
+  <g transform="translate(662, 274)">
+    <rect width="298" height="112" rx="5" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.1" filter="url(#soft-shadow)"/>
+    <rect width="298" height="20" rx="5" fill="#f8fafc"/>
+    <path d="M 0 14 L 0 20 L 298 20 L 298 14 Z" fill="#f8fafc"/>
+    <text x="149" y="14" fill="#0f172a" font-size="10" font-weight="700" text-anchor="middle">Sổ Cái Mật Mã Học, Biometrics &amp; RegTech</text>
+    <text x="12" y="35" fill="#1e293b" font-size="9">• Sổ cái băm SHA-256 Append-Only (hash_chain_ledger.py)</text>
+    <text x="12" y="50" fill="#1e293b" font-size="9">• Cây Merkle niêm phong toàn vẹn ca (merkle_tree.py)</text>
+    <text x="12" y="65" fill="#1e293b" font-size="9">• Xác minh sinh trắc học FIDO2 WebAuthn (ECDSA P-256)</text>
+    <text x="12" y="80" fill="#1e293b" font-size="9">• LLM bóc tách doanh thu tuân thủ Thông tư 40 &amp; NĐ 52</text>
+    <rect x="12" y="90" width="274" height="15" rx="3" fill="#faf5ff"/>
+    <text x="149" y="101" fill="#581c87" font-size="8.5" font-weight="600" text-anchor="middle">Trụ cột: Cryptographic Ledger • Biometrics • LLM • RegTech</text>
+  </g>
+
+  <!-- ============================================================ -->
+  <!-- KẾT NỐI CƠ SỞ DỮ LIỆU (DATABASE ACCESS BUS)                 -->
+  <!-- ĐỒNG TRỤC TUYỆT ĐỐI THEO 3 CỘT: x=189, x=500, x=811          -->
+  <!-- ============================================================ -->
+
+  <!-- Cột 1 Kết nối DB: x=189 -->
+  <line x1="189" y1="396" x2="189" y2="410" stroke="#0284c7" stroke-width="2"/>
+  <polygon points="189,396 185,405 193,405" fill="#0284c7"/>
+  <line x1="189" y1="434" x2="189" y2="448" stroke="#0284c7" stroke-width="2"/>
+  <polygon points="189,448 185,439 193,439" fill="#0284c7"/>
+
+  <!-- Cột 2 Kết nối DB: x=500 -->
+  <line x1="500" y1="396" x2="500" y2="410" stroke="#0284c7" stroke-width="2"/>
+  <polygon points="500,396 496,405 504,405" fill="#0284c7"/>
+  <line x1="500" y1="434" x2="500" y2="448" stroke="#0284c7" stroke-width="2"/>
+  <polygon points="500,448 496,439 504,439" fill="#0284c7"/>
+
+  <!-- Cột 3 Kết nối DB: x=811 -->
+  <line x1="811" y1="396" x2="811" y2="410" stroke="#0284c7" stroke-width="2"/>
+  <polygon points="811,396 807,405 815,405" fill="#0284c7"/>
+  <line x1="811" y1="434" x2="811" y2="448" stroke="#0284c7" stroke-width="2"/>
+  <polygon points="811,448 807,439 815,439" fill="#0284c7"/>
+
+  <!-- Thanh nhãn SQLAlchemy ORM xuyên suốt ở trung tâm (x=120 đến 880, rộng 760px) -->
+  <rect x="120" y="410" width="760" height="24" rx="4" fill="#ffffff" stroke="#7dd3fc" stroke-width="1.2" filter="url(#soft-shadow)"/>
+  <text x="500" y="425.5" fill="#0369a1" font-size="8.8" font-weight="700" text-anchor="middle">SQLAlchemy ORM &amp; PyODBC • Quản lý phiên giao dịch • Khóa dòng .with_for_update() bảo đảm tính nguyên tử ACID</text>
+
+  <!-- ============================================================ -->
+  <!-- 3. TẦNG 3: LƯU TRỮ DỮ LIỆU & SỔ CÁI (SQL SERVER)            -->
+  <!-- ============================================================ -->
+  <rect x="25" y="448" width="950" height="140" rx="8" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.2" filter="url(#soft-shadow)"/>
+  
+  <!-- Header Bar Tầng 3 (Khoảng cách an toàn > 120px) -->
+  <path d="M 25 456 Q 25 448 33 448 L 967 448 Q 975 448 975 456 L 975 470 L 25 470 Z" fill="#dbeafe"/>
+  <text x="40" y="462" fill="#1e3a8a" font-size="10.5" font-weight="700">TẦNG 3: LƯU TRỮ DỮ LIỆU QUAN HỆ &amp; SỔ CÁI (MICROSOFT SQL SERVER)</text>
+  <text x="960" y="461" fill="#1e40af" font-size="8.5" font-weight="600" text-anchor="end">Chuẩn 3NF • 10 Bảng quan hệ toàn vẹn • Chuỗi băm SHA-256</text>
+  <line x1="25" y1="470" x2="975" y2="470" stroke="#93c5fd" stroke-width="1"/>
+
+  <!-- Card 3.1: Quản Trị & Kiểm Soát Ca (Center = 189) -->
+  <g transform="translate(40, 476)">
+    <rect width="298" height="102" rx="5" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.1" filter="url(#soft-shadow)"/>
+    <rect width="298" height="19" rx="5" fill="#f1f5f9"/>
+    <path d="M 0 13 L 0 19 L 298 19 L 298 13 Z" fill="#f1f5f9"/>
+    <text x="149" y="13.5" fill="#0f172a" font-size="9.8" font-weight="700" text-anchor="middle">1. Quản Trị Hệ Thống &amp; Kiểm Soát Ca</text>
+    
+    <text x="12" y="33" fill="#0f172a" font-size="9.2" font-weight="700">• users:</text>
+    <text x="54" y="33" fill="#475569" font-size="8.8">id, email, password, webauthn_public_key</text>
+    
+    <text x="12" y="47" fill="#0f172a" font-size="9.2" font-weight="700">• merchants:</text>
+    <text x="76" y="47" fill="#475569" font-size="8.8">merchant_code, bank_bin, webhook_secret</text>
+    
+    <text x="12" y="61" fill="#0f172a" font-size="9.2" font-weight="700">• merchant_users:</text>
+    <text x="104" y="61" fill="#475569" font-size="8.8">user_id, role (CASHIER, REVIEWER, OWNER)</text>
+    
+    <text x="12" y="75" fill="#0f172a" font-size="9.2" font-weight="700">• shifts:</text>
+    <text x="52" y="75" fill="#475569" font-size="8.8">shift_name, target_revenue, status (OPEN, CLOSED)</text>
+    
+    <rect x="12" y="83" width="274" height="13" rx="3" fill="#f8fafc"/>
+    <text x="149" y="93" fill="#475569" font-size="8.2" font-weight="600" text-anchor="middle">Kiểm soát chặt chẽ: Khóa tạo đơn ngoài ca làm việc</text>
+  </g>
+
+  <!-- Card 3.2: Đơn Hàng & Biến Động Số Dư (Center = 500) -->
+  <g transform="translate(351, 476)">
+    <rect width="298" height="102" rx="5" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.1" filter="url(#soft-shadow)"/>
+    <rect width="298" height="19" rx="5" fill="#f1f5f9"/>
+    <path d="M 0 13 L 0 19 L 298 19 L 298 13 Z" fill="#f1f5f9"/>
+    <text x="149" y="13.5" fill="#0f172a" font-size="9.8" font-weight="700" text-anchor="middle">2. Đơn Bán Hàng &amp; Dòng Tiền Ngân Hàng</text>
+    
+    <text x="12" y="33" fill="#0f172a" font-size="9.2" font-weight="700">• orders:</text>
+    <text x="58" y="33" fill="#0284c7" font-size="8.8" font-weight="700">UNPAID / PARTIALLY_PAID / PAID</text>
+    
+    <text x="12" y="47" fill="#0f172a" font-size="9.2" font-weight="700">• payment_requests:</text>
+    <text x="118" y="47" fill="#15803d" font-size="8.8" font-weight="700">ACTIVE / FULFILLED / REVOKED</text>
+    
+    <text x="12" y="61" fill="#0f172a" font-size="9.2" font-weight="700">• bank_transactions:</text>
+    <text x="118" y="61" fill="#475569" font-size="8.8">reference_code Unique, amount, desc</text>
+    
+    <text x="12" y="75" fill="#475569" font-size="8.8">Xử lý chuyển thiếu: Tự thu hồi QR cũ, cấp QR mới</text>
+    
+    <rect x="12" y="83" width="274" height="13" rx="3" fill="#f8fafc"/>
+    <text x="149" y="93" fill="#0369a1" font-size="8.2" font-weight="600" text-anchor="middle">Khóa dòng nguyên tử, cập nhật lũy kế số tiền đã thanh toán</text>
+  </g>
+
+  <!-- Card 3.3: Sổ Cái Bất Biến & Kiểm Toán (Center = 811) -->
+  <g transform="translate(662, 476)">
+    <rect width="298" height="102" rx="5" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.1" filter="url(#soft-shadow)"/>
+    <rect width="298" height="19" rx="5" fill="#f1f5f9"/>
+    <path d="M 0 13 L 0 19 L 298 19 L 298 13 Z" fill="#f1f5f9"/>
+    <text x="149" y="13.5" fill="#0f172a" font-size="9.8" font-weight="700" text-anchor="middle">3. Sổ Cái Bất Biến &amp; Bằng Chứng Kiểm Toán</text>
+    
+    <text x="12" y="33" fill="#0f172a" font-size="9.2" font-weight="700">• payment_allocations:</text>
+    <text x="130" y="33" fill="#7e22ce" font-size="8.8" font-weight="700">SHA-256 (prev_hash, record_hash)</text>
+    
+    <text x="12" y="47" fill="#0f172a" font-size="9.2" font-weight="700">• decisions:</text>
+    <text x="70" y="47" fill="#475569" font-size="8.8">Lưu chữ ký sinh trắc học WebAuthn FIDO2</text>
+    
+    <text x="12" y="61" fill="#0f172a" font-size="9.2" font-weight="700">• shift_audits:</text>
+    <text x="84" y="61" fill="#475569" font-size="8.8">Bằng chứng Merkle Root niêm phong ca đóng</text>
+    
+    <text x="12" y="75" fill="#475569" font-size="8.8">Nguyên tắc: Chỉ ghi thêm (Append-Only), cấm xóa sửa</text>
+    
+    <rect x="12" y="83" width="274" height="13" rx="3" fill="#f8fafc"/>
+    <text x="149" y="93" fill="#6b21a8" font-size="8.2" font-weight="600" text-anchor="middle">Đảo sổ bằng bút toán REVERSAL • Chống chối bỏ 100%</text>
+  </g>
+
+  <!-- ============================================================ -->
+  <!-- 4. BANNER TỔNG KẾT LUỒNG VẬN HÀNH (FOOTER SUMMARY)           -->
+  <!-- ============================================================ -->
+  <rect x="25" y="598" width="950" height="36" rx="6" fill="#0f172a"/>
+  <text x="45" y="621" fill="#38bdf8" font-size="9.8" font-weight="700">LUỒNG BẢO MẬT:</text>
+  
+  <text x="150" y="621" fill="#ffffff" font-size="9.2" font-weight="500">1. VietQR khóa tiền</text>
+  <text x="258" y="621" fill="#38bdf8" font-size="9.5">➔</text>
+  
+  <text x="280" y="621" fill="#ffffff" font-size="9.2" font-weight="500">2. Xác thực HMAC-SHA256</text>
+  <text x="424" y="621" fill="#38bdf8" font-size="9.5">➔</text>
+  
+  <text x="446" y="621" fill="#ffffff" font-size="9.2" font-weight="500">3. Đối soát AI &amp; Đẩy SSE</text>
+  <text x="580" y="621" fill="#38bdf8" font-size="9.5">➔</text>
+  
+  <text x="602" y="621" fill="#ffffff" font-size="9.2" font-weight="500">4. Duyệt ngoại lệ FIDO2</text>
+  <text x="736" y="621" fill="#38bdf8" font-size="9.5">➔</text>
+  
+  <text x="758" y="621" fill="#ffffff" font-size="9.2" font-weight="500">5. Sổ cái SHA-256 &amp; Chốt Merkle Root</text>
+</svg>
+  </div>
+</body>
+</html>

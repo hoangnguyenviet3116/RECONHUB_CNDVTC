@@ -429,16 +429,16 @@ function selectOvpMethod(type) {
 
     if (type === "CASH") {
         if (pillCash) pillCash.className = "btn btn-sm btn-outline-primary active fw-semibold";
-        if (input) input.value = "[HOÀN TIỀN MẶT]: Đã xuất tiền mặt tại quầy trả lại khách hàng ngay lúc thanh toán.";
-        if (desc) desc.textContent = "• Đã xuất tiền mặt tại quầy trả lại khách. Hệ thống cân đối giảm tiền thừa trên ngân hàng để khớp sổ quỹ.";
+        if (input) input.value = "Hoàn tiền mặt tại quầy";
+        if (desc) desc.textContent = "• Đã xuất tiền mặt tại quầy trả lại khách.";
     } else if (type === "BANK_TRANSFER") {
         if (pillBank) pillBank.className = "btn btn-sm btn-outline-primary active fw-semibold";
-        if (input) input.value = "[CHUYỂN KHOẢN TRẢ LẠI]: Đã chuyển khoản ngân hàng hoàn tiền về đúng tài khoản người gửi.";
-        if (desc) desc.textContent = "• Tiền thừa được chuyển hoàn trực tiếp. Số dư ngân hàng giảm tương ứng để khớp doanh thu thực tế.";
+        if (input) input.value = "Chuyển khoản trả lại khách";
+        if (desc) desc.textContent = "• Chuyển hoàn về tài khoản người gửi.";
     } else if (type === "TIP") {
         if (pillTip) pillTip.className = "btn btn-sm btn-outline-primary active fw-semibold";
-        if (input) input.value = "[TIỀN TIP/BẢO LƯU]: Khách hàng tặng lại số tiền thừa làm tiền tip cho quán / nhân viên.";
-        if (desc) desc.textContent = "• Ghi nhận tiền thừa vào quỹ tiền tip của ca. Không phát sinh chi tiền mặt từ quầy.";
+        if (input) input.value = "Tiền tip / Trừ đơn sau";
+        if (desc) desc.textContent = "• Ghi nhận vào quỹ tiền tip của ca.";
     }
 }
 
@@ -454,13 +454,17 @@ function selectReverseReason(type) {
 
     if (type === "MISMATCH") {
         if (pillMis) pillMis.className = "btn btn-sm btn-outline-danger active fw-semibold";
-        if (input) input.value = "[GHÉP NHẦM]: Đảo lại khoản tiền do ghép nhầm sang hóa đơn khác để phân bổ lại cho đúng.";
+        if (input) input.value = "Ghép nhầm hóa đơn";
     } else if (type === "CANCEL") {
         if (pillCan) pillCan.className = "btn btn-sm btn-outline-danger active fw-semibold";
-        if (input) input.value = "[HỦY/ĐỔI ĐƠN]: Khách hàng yêu cầu hủy hoặc đổi món, hoàn tiền về quỹ chờ xử lý.";
+        if (input) input.value = "Khách hủy / đổi đơn";
     } else if (type === "OTHER") {
         if (pillOth) pillOth.className = "btn btn-sm btn-outline-danger active fw-semibold";
-        if (input) input.value = "[ĐIỀU CHỈNH SỔ QUỸ]: Điều chỉnh lại bút toán để khớp số liệu kiểm toán ca bán hàng.";
+        if (input) {
+            input.value = "";
+            input.placeholder = "Nhập lý do khác...";
+            input.focus();
+        }
     }
 }
 
@@ -567,7 +571,7 @@ async function handleOverpaymentSubmit(event) {
             allocated_amount: targetTx ? targetTx.allocated_amount : null,
             unallocated_amount: targetTx ? targetTx.unallocated_amount : null,
             reviewer_id: getCurrentUserId(),
-            reviewer_name: "Quản trị viên",
+            reviewer_name: (typeof getLoggedInUser === "function" ? getLoggedInUser()?.full_name : null) || "Thu ngân POS",
             decision_type: "OVERPAYMENT_RESOLUTION",
             reason: methodPlan,
             biometric_verified: securityMode === "WEBAUTHN_SIGN",
@@ -577,6 +581,17 @@ async function handleOverpaymentSubmit(event) {
         // 4. Các khoản đã xử lý sẽ không hiện ở tab chờ xử lý nữa
         renderUnmatchedTable();
         renderDecisionsHistory();
+
+        // 5. Hiển thị Banner nổi bật tóm tắt dòng tiền vừa xử lý
+        showOverpaymentSuccessBanner({
+            orderCode: resp.order_code || (targetTx ? targetTx.order_code : "ORD1010"),
+            txCode: resp.reference_code || (targetTx ? targetTx.reference_code : "GD"),
+            orderAmount: targetTx ? (targetTx.order_amount || targetTx.allocated_amount) : 580000,
+            txAmount: targetTx ? targetTx.amount : 630000,
+            refundAmount: targetTx ? targetTx.unallocated_amount : 50000,
+            methodPlan: methodPlan,
+            cashierName: (typeof getLoggedInUser === "function" ? getLoggedInUser()?.full_name : null) || "Thu ngân POS"
+        });
 
         showToast("Đã ghi nhận phương thức xử lý tiền thừa thành công!", "success");
     } catch (error) {
@@ -924,6 +939,10 @@ async function handleManualMatchSubmit(event) {
 
 // 6. Mở hộp thoại Đảo giao dịch
 function openReverseModal(allocId) {
+    if (getCurrentRole() === "CASHIER") {
+        showToast("Từ chối quyền hạn: Thu ngân không được phép thực hiện đảo giao dịch (Yêu cầu vai trò Kế toán đối soát hoặc Chủ cửa hàng).", "danger");
+        return;
+    }
     selectReverseReason("MISMATCH");
     const alloc = reconAllocations.find((a) => Number(a.id) === Number(allocId));
     if (!alloc) return;
@@ -941,6 +960,16 @@ function openReverseModal(allocId) {
 async function handleReverseAllocSubmit(event) {
     event.preventDefault();
     if (isSubmittingDecision) return;
+
+    if (getCurrentRole() === "CASHIER") {
+        const errorBox = document.getElementById("reverse-error-box");
+        if (errorBox) {
+            errorBox.textContent = "Từ chối quyền hạn: Thu ngân không được phép thực hiện đảo giao dịch.";
+            errorBox.classList.remove("d-none");
+        }
+        showToast("Từ chối quyền hạn: Thu ngân không được phép thực hiện đảo giao dịch.", "danger");
+        return;
+    }
 
     const allocationId = Number(document.getElementById("reverse-alloc-id")?.value || 0);
     const reason = (document.getElementById("reverse-reason-input")?.value || "").trim();
@@ -1070,4 +1099,82 @@ function escapeReconHtml(str) {
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;");
+}
+// --------------------------------------------------------------------------
+// HIỂN THỊ BANNER NỔI BẬT DÒNG TIỀN VÀ ĐIỀU HƯỚNG SANG LỊCH SỬ PHÊ DUYỆT
+// --------------------------------------------------------------------------
+function showOverpaymentSuccessBanner(data) {
+    const container = document.getElementById("recon-alert-container");
+    if (!container) return;
+
+    const ordCode = data.orderCode || "Hóa đơn";
+    const refCode = data.txCode || "Giao dịch";
+    const refundFormatted = formatVND(data.refundAmount || 50000);
+    const cashier = data.cashierName || "Thu ngân POS";
+    const method = data.methodPlan || "Hoàn tiền mặt tại quầy";
+
+    container.innerHTML = `
+        <div class="alert border-0 shadow-sm p-3 mb-4 rounded-3 d-flex align-items-center justify-content-between flex-wrap gap-3" 
+             style="background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border-left: 5px solid #10b981 !important;">
+            <div class="d-flex align-items-center gap-3">
+                <div style="width: 46px; height: 46px; border-radius: 12px; background: #dcfce7; color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; box-shadow: 0 2px 8px rgba(22, 163, 74, 0.15);">
+                    💵
+                </div>
+                <div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <strong class="text-success fw-bold" style="font-size: 0.95rem;">ĐÃ XÁC NHẬN HOÀN TIỀN THỪA CHO KHÁCH</strong>
+                        <span class="badge bg-success text-white font-numeric px-2 py-0.5" style="font-size: 0.8rem;">${refundFormatted}</span>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.72rem;">● Đã cân đối sổ quỹ</span>
+                    </div>
+                    <div class="text-dark small mt-1" style="font-size: 0.82rem; line-height: 1.5;">
+                        <span class="text-secondary">• Hóa đơn:</span> <strong class="text-dark font-numeric">${escapeReconHtml(ordCode)}</strong> &nbsp;|&nbsp; 
+                        <span class="text-secondary">• Ngân hàng nhận:</span> <strong class="text-dark font-numeric">${formatVND(data.txAmount)}</strong> &nbsp;|&nbsp; 
+                        <span class="text-secondary">• Xuất tiền mặt hoàn khách:</span> <strong class="text-danger font-numeric">-${refundFormatted}</strong> &nbsp;|&nbsp; 
+                        <span class="text-secondary">• Người ghi nhận:</span> <strong class="text-dark">${escapeReconHtml(cashier)}</strong>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-sm btn-success fw-semibold px-3 py-1.5 shadow-sm" onclick="switchToHistoryTabAndHighlight()" style="border-radius: 8px;">
+                    Xem nhật ký sổ cái →
+                </button>
+                <button type="button" class="btn-close ms-2" onclick="this.closest('.alert').remove()" aria-label="Đóng"></button>
+            </div>
+        </div>
+    `;
+
+    // Cập nhật huy hiệu trên Tab Lịch sử phê duyệt
+    const histBtn = document.getElementById("tab-history-btn");
+    if (histBtn) {
+        let badge = histBtn.querySelector(".badge-new-decision");
+        if (!badge) {
+            badge = document.createElement("span");
+            badge.className = "badge bg-success ms-1.5 badge-new-decision";
+            badge.style.fontSize = "0.7rem";
+            badge.textContent = "1 mới";
+            histBtn.appendChild(badge);
+        }
+    }
+}
+
+function switchToHistoryTabAndHighlight() {
+    const histBtn = document.getElementById("tab-history-btn");
+    if (histBtn) {
+        bootstrap.Tab.getOrCreateInstance(histBtn).show();
+        // Xóa badge mới khi đã xem
+        histBtn.querySelector(".badge-new-decision")?.remove();
+        
+        // Highlight dòng đầu tiên trong bảng lịch sử
+        setTimeout(() => {
+            const firstRow = document.querySelector("#recon-decisions-tbody tr");
+            if (firstRow) {
+                firstRow.scrollIntoView({ behavior: "smooth", block: "center" });
+                firstRow.style.transition = "background-color 0.5s ease";
+                firstRow.style.backgroundColor = "#dcfce7";
+                setTimeout(() => {
+                    firstRow.style.backgroundColor = "";
+                }, 2500);
+            }
+        }, 200);
+    }
 }

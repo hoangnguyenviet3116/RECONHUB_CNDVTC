@@ -10,7 +10,7 @@
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trợ Lý Vận Hành ThuChi AI — VietQR ReconHub</title>
+    <title>Trợ lý AI Hubbie — VietQR ReconHub</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
@@ -111,24 +111,28 @@
                 <section class="hubbie-chat-area" aria-label="Phòng hội thoại trực tuyến">
                     <!-- Header tối giản -->
                     <div class="hubbie-chat-header">
-                        <div class="d-flex align-items-center gap-2.5 min-w-0">
-                            <button type="button" class="btn-toggle-sidebar" id="btn-toggle-sidebar" title="Đóng/Mở lịch sử hội thoại">
+                        <div class="d-flex align-items-center min-w-0" style="gap: 12px;">
+                            <button type="button" class="btn-toggle-sidebar" id="btn-hubbie-toggle-sidebar" title="Đóng/Mở lịch sử hội thoại">
                                 <svg class="hi-icon hi-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 17px; height: 17px;">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>
                                 </svg>
                                 <span class="d-none d-sm-inline" style="font-size: 0.78rem;">Lịch sử</span>
                             </button>
 
-                            <div class="hubbie-avatar-badge-sm">
-                                <svg class="hi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 17px; height: 17px;">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"/>
-                                </svg>
-                            </div>
+                            <div class="vr mx-1 d-none d-sm-block" style="height: 20px; opacity: 0.2;"></div>
 
-                            <div>
-                                <div class="d-flex align-items-center gap-1.5">
-                                    <strong class="text-dark small fw-bold">ThuChi AI Copilot</strong>
-                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-1.5 py-0 rounded-pill" style="font-size: 0.65rem;">● Trực tuyến</span>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="hubbie-avatar-badge-sm">
+                                    <svg class="hi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 17px; height: 17px;">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"/>
+                                    </svg>
+                                </div>
+
+                                <div>
+                                    <div class="d-flex align-items-center gap-1.5">
+                                        <strong class="text-dark small fw-bold" style="font-size: 0.9rem;">Hubbie</strong>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-1.5 py-0 rounded-pill" style="font-size: 0.65rem;">● Trực tuyến</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -156,7 +160,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"/>
                                     </svg>
                                 </div>
-                                <h2 class="h5 fw-bold text-dark mb-1">ThuChi AI Copilot</h2>
+                                <h2 class="h5 fw-bold text-dark mb-1">Hubbie</h2>
                                 <p class="text-secondary small mb-4 mx-auto" style="max-width: 480px; font-size: 0.82rem; line-height: 1.5;">
                                     Trợ lý vận hành tài chính &amp; đối soát tự động ReconHub. Hỏi đáp thu chi, truy xét ca lưu trữ và trực quan hóa tức thì.
                                 </p>
@@ -208,7 +212,7 @@
 
                             <form id="hubbie-chat-form" novalidate>
                                 <div class="hubbie-input-box">
-                                    <input type="text" id="hubbie-input-text" class="hubbie-input-field" placeholder="Hỏi ThuChi AI bất kỳ điều gì về sổ quỹ, ca làm việc, đối soát..." autocomplete="off">
+                                    <input type="text" id="hubbie-input-text" class="hubbie-input-field" placeholder="Hỏi Hubbie bất kỳ điều gì về sổ quỹ, ca làm việc, đối soát..." autocomplete="off">
                                     <button type="submit" class="btn-hubbie-send" id="btn-hubbie-send" title="Gửi câu hỏi">
                                         <svg class="hi-icon hi-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width: 16px; height: 16px;">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"/>
@@ -217,7 +221,7 @@
                                 </div>
                             </form>
                             <div class="hubbie-disclaimer">
-                                ThuChi AI vận hành trên mô hình nội bộ Llama 3.2 — Dữ liệu tài chính bảo mật 100%.
+                                Hubbie vận hành trên mô hình nội bộ Llama 3.2 — Dữ liệu tài chính bảo mật 100%.
                             </div>
                         </div>
                     </div>

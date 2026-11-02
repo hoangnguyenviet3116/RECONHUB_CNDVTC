@@ -218,10 +218,23 @@ def make_decision(
     db: Session = Depends(get_db),
     user_info: dict = Depends(verify_merchant_user)
 ):
-    if user_info["role"] not in ["REVIEWER", "OWNER"]:
+    decision_type = decision_data.get("decision_type")
+
+    # Phân quyền chuẩn nghiệp vụ bán lẻ:
+    # 1. Hoàn tiền thừa tại quầy (OVERPAYMENT_RESOLUTION): Thu ngân (CASHIER), Kế toán (REVIEWER), Chủ cửa hàng (OWNER)
+    #    đều được phép thực hiện tức thì để trả tiền mặt cho khách tại quầy không phải chờ đợi.
+    # 2. Đảo bút toán (REVERSE_ALLOCATION) & Ghép thủ công (APPROVE_MANUAL_MATCH):
+    #    Tác động trực tiếp chuỗi Merkle Tree và cấu trúc sổ cái, bắt buộc vai trò REVIEWER hoặc OWNER.
+    # Phân quyền: Thu ngân (CASHIER) được phép đối soát ghép đơn và xử lý tiền thừa tại quầy.
+    # Chỉ riêng Đảo bút toán (REVERSE_ALLOCATION) bắt buộc vai trò Kế toán (REVIEWER) hoặc Chủ cửa hàng (OWNER).
+    allowed_roles = ["CASHIER", "REVIEWER", "OWNER"]
+    if decision_type == "REVERSE_ALLOCATION":
+        allowed_roles = ["REVIEWER", "OWNER"]
+
+    if user_info["role"] not in allowed_roles:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Bạn không có quyền thực hiện xét duyệt ngoại lệ (Chỉ REVIEWER hoặc OWNER)."
+            detail="Thu ngân không có quyền đảo bút toán (Chỉ dành cho Kế toán đối soát hoặc Chủ cửa hàng)."
         )
 
     user = db.query(models.User).filter(models.User.id == user_info["user_id"]).first()
